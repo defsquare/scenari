@@ -79,26 +79,21 @@ Then I receive a 200 response
          (swap! regexes conj ~regex )
          (swap! steps assoc ~(str regex) ~fn-name))))
 
-(def myregex #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\""))
+(def myregex #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\" ")
 (def mystring "When I create a new product with name \"iphone 6\" and description \"awesome phone\"")
 
-(defwhen #"I create a new product with name \"([a-z 0-9*)\" and description \"([a-z 0-9]*)\"" [name desc]
+(defwhen #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z0-9]*)\"" [name desc]
   (print name desc))
 
 (defn get-steps [scenario-ast]
-  (insta/transform {:sentence }))
-
-(defn exec-scenario [scenario]
-  (let [gherkin-parser scenario]
-    ())
   )
 
-
+(defn exec-scenario [scenario]
+  (let [gherkin-parser scenario]))
 
 (defn when-I-create-1234 [name description]
   (print "new product " name description))
 
-(defn get-fn-matching-steps [steps fns]
-  )
+(defn get-fn-matching-steps [steps fns])
 
-(pprint (gherkin-parser example-scenario ))
+(pprint (gherkin-parser example-scenario-multiple ))
