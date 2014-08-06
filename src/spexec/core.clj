@@ -8,31 +8,59 @@
          whitespace = #'\\s+'"))
 
 (def gherkin-parser (insta/parser
-          "S             = scenario* whitespace
-           scenario      = scenario_keyword sentence eol steps
+          "SPEC               = <whitespace> (scenario <eol> <eol>)*
+           scenario           = <scenario_keyword> scenario_sentence <eol> steps
            <scenario_keyword> = 'Scenario: '
-           comment       = (comment_line whitespace?)*
-           comment_line = whitespace* '#' sentence
-           steps         = (comment? whitespace* step_keyword sentence eol?)* epsilon
-           step_keyword  = 'Given '|'When '|'Then '|'And '
-           whitespace    = #'\\s+'
-           space         = ' '  | '\t'
-           eol           = '\r' | '\n'
-
-           sentence      = #'[a-zA-Z0-9\" ]+'
-           word          = #'[a-zA-Z]+'
-           number        = #'[0-9]+'
+           <comment>          = (comment_line whitespace?)*
+           <comment_line>     = <whitespace*> <'#'> <sentence>
+           steps              = (comment | <whitespace*> | step_sentence | <eol>)*
+           given              = <'Given '>
+           when               = <'When '>
+           then               = <'Then '>
+           and                = <'And '>
+           <step_keyword>     = given | when | then | and
+           <whitespace>       = #'\\s+'
+           <space>            = ' '  | '\t'
+           <eol>              = '\r' | '\n'
+           scenario_sentence  = #'[a-zA-Z0-9\" ]+'
+           step_sentence      = step_keyword #'[a-zA-Z0-9\" ]+'
+           sentence           = #'[a-zA-Z0-9\" ]+'
+           word               = #'[a-zA-Z]+'
+           number             = #'[0-9]+'
            "))
 
-(def example-scenario "Scenario: create a new product\n
-# this is a comment\n
-When I create a new product with name \"iphone 6\" and description \"awesome phone\"\n
-Then I receive a response with an id 564228\n
-And a location URL \n
+(def example-scenario-unique "
+
+Scenario: create a new product
+# this is a comment
+When I create a new product with name \"iphone 6\" and description \"awesome phone\"
+Then I receive a response with an id 56422
+And a location URL
 # this a second comment
 # on two lines
-When I invoke a GET request on location URL\n
-Then I receive a 200 response\n")
+When I invoke a GET request on location URL
+Then I receive a 200 response
+
+")
+
+(def example-scenario-multiple "
+
+Scenario: create a new product
+# this is a comment
+When I create a new product with name \"iphone 6\" and description \"awesome phone\"
+Then I receive a response with an id 56422
+And a location URL
+# this a second comment
+# on two lines
+When I invoke a GET request on location URL
+Then I receive a 200 response
+
+Scenario: get product info
+#test
+When I invoke a GET request on location URL
+Then I receive a 200 response
+
+")
 
 (defprotocol STEP
   (step [this regex]))
@@ -40,17 +68,31 @@ Then I receive a 200 response\n")
 (defn rand-from-to [from to] (+ from (rand-int to)))
 
 (def steps (atom {}))
+(def regexes (atom []));;regex can't be a key in a map, so the key are their string in the steps map, here the regexes are stored for easy retrieving
 
-(defmacro defwhen [regex params body]
-  (let [fn-name (symbol (str "when-" (apply str (interpose "-" (take 2 (string/split (str regex) #" ")))) "-" (rand-from-to 1 100000)))]
+(defmacro defwhen [regex params body];;create and associate a function to the step regex
+  (let [fn-name (symbol (str "when-"
+                             (apply str (interpose "-" (take 2 (string/split (str regex) #" "))));;first two words of the regex
+                             "-"
+                             (rand-from-to 1 100000)))];;a random number
     `(do (defn ~fn-name [~@params] (~@body))
-         (swap! steps assoc ~regex ~fn-name))))
+         (swap! regexes conj ~regex )
+         (swap! steps assoc ~(str regex) ~fn-name))))
 
- (def myregex #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\""))
+(def myregex #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\""))
 (def mystring "When I create a new product with name \"iphone 6\" and description \"awesome phone\"")
 
-(macroexpand-1 '(defwhen #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\"" [name desc]
-                 (print name desc)))
+(defwhen #"I create a new product with name \"([a-z 0-9*)\" and description \"([a-z 0-9]*)\"" [name desc]
+  (print name desc))
+
+(defn get-steps [scenario-ast]
+  (insta/transform {:sentence }))
+
+(defn exec-scenario [scenario]
+  (let [gherkin-parser scenario]
+    ())
+  )
+
 
 
 (defn when-I-create-1234 [name description]
