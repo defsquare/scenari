@@ -1,11 +1,8 @@
 (ns spexec.core
   (:use [clojure.pprint])
   (:require [instaparse.core :as insta]
-            [clojure.string :as string]))
-
-(def s (insta/parser
-        "S          = whitespace? epsilon;
-         whitespace = #'\\s+'"))
+            [clojure.string :as string]
+            [clojure.zip :as zip]))
 
 (def gherkin-parser (insta/parser
           "SPEC               = <whitespace> (scenario <eol> <eol>)*
@@ -29,71 +26,89 @@
            number             = #'[0-9]+'
            "))
 
-(def example-scenario-unique "
-
-Scenario: create a new product
-# this is a comment
-When I create a new product with name \"iphone 6\" and description \"awesome phone\"
-Then I receive a response with an id 56422
-And a location URL
-# this a second comment
-# on two lines
-When I invoke a GET request on location URL
-Then I receive a 200 response
-
-")
-
-(def example-scenario-multiple "
-
-Scenario: create a new product
-# this is a comment
-When I create a new product with name \"iphone 6\" and description \"awesome phone\"
-Then I receive a response with an id 56422
-And a location URL
-# this a second comment
-# on two lines
-When I invoke a GET request on location URL
-Then I receive a 200 response
-
-Scenario: get product info
-#test
-When I invoke a GET request on location URL
-Then I receive a 200 response
-
-")
+(def keywords-str {:given "Given "
+                   :when "When "
+                   :then "Then "
+                   :and "And "})
 
 (defprotocol STEP
   (step [this regex]))
 
 (defn rand-from-to [from to] (+ from (rand-int to)))
 
-(def steps (atom {}))
+(def regexes-to-fns (atom {}))
 (def regexes (atom []));;regex can't be a key in a map, so the key are their string in the steps map, here the regexes are stored for easy retrieving
 
-(defmacro defwhen [regex params body];;create and associate a function to the step regex
-  (let [fn-name (symbol (str "when-"
-                             (apply str (interpose "-" (take 2 (string/split (str regex) #" "))));;first two words of the regex
-                             "-"
-                             (rand-from-to 1 100000)))];;a random number
-    `(do (defn ~fn-name [~@params] (~@body))
-         (swap! regexes conj ~regex )
-         (swap! steps assoc ~(str regex) ~fn-name))))
+(defn generate-fn-symbol
+  "generate a function name from the regex and a random number"
+  [prefix regex]
+  (symbol (str "when-"
+               (apply str (interpose "-" (take 2 (string/split (str regex) #" "))));;first two words of the regex
+               "-"
+               (rand-from-to 1 100000))))
 
-(def myregex #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\" ")
-(def mystring "When I create a new product with name \"iphone 6\" and description \"awesome phone\"")
+(defn store-fns-and-regexes! [fn-symbol regex]
+   (swap! regexes conj regex )
+   (swap! regexes-to-fns assoc (str regex) fn-symbol))
 
-(defwhen #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z0-9]*)\"" [name desc]
-  (print name desc))
+(defmacro defgiven
+  "create and associate a regex to function params and body that will match the steps string in scenarios"
+  [regex params body]
+  `(let [step-fn# (fn [~@params] (~@body))]
+     (def ~(generate-fn-symbol "given-" regex) step-fn#)
+     (store-fns-and-regexes! step-fn# ~regex)
+     step-fn#))
 
-(defn get-steps [scenario-ast]
+(defmacro defwhen
+"create and associate a regex to function params and body that will match the steps string in scenarios"
+  [regex params body]
+  `(let [step-fn# (fn [~@params] (~@body))]
+     (def ~(generate-fn-symbol "when-" regex) step-fn#)
+     (store-fns-and-regexes! step-fn# ~regex)
+     step-fn#))
+
+(defmacro defthen
+"create and associate a regex to function params and body that will match the steps string in scenarios"
+  [regex params body]
+  `(let [step-fn# (fn [~@params] (~@body))]
+     (def ~(generate-fn-symbol "then-" regex) step-fn#)
+     (store-fns-and-regexes! step-fn# ~regex)
+     step-fn#))
+
+(defn scenarios-ast [spec-ast]
+  (-> (zip/vector-zip spec-ast) zip/down zip/rights))
+
+(defn steps-sentence-ast [scenario-ast]
+  (-> (zip/vector-zip scenario-ast) zip/down zip/right zip/right zip/node))
+
+(defn step-sentences [steps-ast]
+  (let [v-steps-sentences (-> (zip/vector-zip steps-ast) zip/down zip/rights)]
+    (map (fn [[_ [keyword] sentence]]
+           sentence) v-steps-sentences)))
+
+(defn matching-fn
+  "return the tuple of fn/regex as a vector that match the step-sentence"
+  [step-sentence]
+  (let [matching-regexes (filter (fn [regex]
+                                   (not (empty? (re-find regex step-sentence))))
+                                 @regexes)]
+    (if (> (count matching-regexes) 1)
+      (throw (RuntimeException. (str "More than one matching functions were found for the following step sentence, please refine your regex: " step-sentence))))
+    [(get @regexes-to-fns (str (first matching-regexes))) (first matching-regexes)]
+    ))
+
+(defn params-from-steps
+  "return a vector of groups the regex found in the step sentence"
+  [regex step-sentence]
+  (rest (re-find regex step-sentence))
   )
 
-(defn exec-scenario [scenario]
-  (let [gherkin-parser scenario]))
-
-(defn when-I-create-1234 [name description]
-  (print "new product " name description))
-
-(defn get-fn-matching-steps [steps fns])
-
-(pprint (gherkin-parser example-scenario-multiple ))
+(defn exec-spec! [spec-str]
+  ;;for each scenarios
+  (doseq [scenario-ast (scenarios-ast (gherkin-parser spec-str))]
+    ;;for each step sentence, find the fn which have a regex that match
+    (doseq [step-sentence (step-sentences (steps-sentence-ast scenario-ast))]
+      (let [[fn regex] (matching-fn step-sentence)]
+        (if (not (nil? fn))
+          ;;now execute the fn with the param value extracted from the step sentence
+          (apply fn (params-from-steps regex step-sentence)))))))

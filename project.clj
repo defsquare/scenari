@@ -2,5 +2,6 @@
               :description ""
               :url "http://zenmodeler.com"
               :dependencies [[org.clojure/clojure "1.6.0"]
-                             [instaparse "1.3.3"]])
+                             [instaparse "1.3.3"]]
+              :source-paths ["src" "src/main/clojure"])
 
