@@ -41,7 +41,7 @@
 (def regexes (atom #{}));;regex can't be a key in a map, so the key are their string in the steps map, here the regexes are stored for easy retrieving
 
 (defn generate-fn-symbol
-  "generate a function name from the regex and a random number"
+  "generate a function name from the regex and a random number - NOT USED ANYMORE"
   [prefix regex]
   (symbol (str "when-"
                (apply str (interpose "-" (take 2 (string/split (str regex) #" "))));;first two words of the regex
@@ -50,15 +50,12 @@
 
 (defn store-fns-and-regexes! [fn-symbol regex]
    (swap! regexes conj regex)
-   (swap! regexes-to-fns assoc (str regex) fn-symbol)
-   )
+   (swap! regexes-to-fns assoc (str regex) fn-symbol))
 
 (defmacro defgiven
   "create and associate a regex to function params and body that will match the steps string in scenarios"
   [regex params & body]
-  `(let [step-fn# (fn [~@params] ~@body)
-         fn-symbol# (generate-fn-symbol "given-" ~regex)]
-     (def fn-symbol# step-fn#)
+  `(let [step-fn# (fn [~@params] ~@body)]
      (store-fns-and-regexes! step-fn# ~regex)
      [~regex step-fn#]))
 
@@ -66,7 +63,6 @@
   "create and associate a regex to function params and body that will match the steps string in scenarios"
   [regex params & body]
   `(let [step-fn# (fn [~@params] ~@body)]
-     (def ~(generate-fn-symbol "when-" regex) step-fn#)
      (store-fns-and-regexes! step-fn# ~regex)
      [~regex step-fn#]))
 
@@ -74,7 +70,6 @@
   "create and associate a regex to function params and body that will match the steps string in scenarios"
   [regex params & body]
   `(let [step-fn# (fn [~@params] ~@body)]
-     (def ~(generate-fn-symbol "then-" regex) step-fn#)
      (store-fns-and-regexes! step-fn# ~regex)
      [~regex step-fn#]))
 
@@ -133,6 +128,4 @@
               (println "execute fn " fn " with " prev-ret " and "  (params-from-steps regex step-sentence))
               (println "result " result)
               (recur (rest step-sentences)
-                     result))
-          )
-        )))))
+                     result))))))))
