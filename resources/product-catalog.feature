@@ -1,12 +1,14 @@
-feature: product catalog management
-
 Scenario: create a new product
-When I create a new product
-Then I receive a response with an id
+# this is a comment
+When I create a new product with name "iphone 6" and description "awesome phone"
+Then I receive a response with an id 56422
 And a location URL
+# this a second comment
+# on two lines
 When I invoke a GET request on location URL
 Then I receive a 200 response
-        Examples:
-            |data   |id |title        |description          |
-            |product|1  |product title|product description  |
 
+Scenario: get product info
+#test
+When I invoke a GET request on location URL
+Then I receive a 200 response
