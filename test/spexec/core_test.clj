@@ -1,6 +1,11 @@
 (ns spexec.core-test
-  (:require [clojure.test :refer :all]
-            [spexec.core :refer :all]))
+  (:require [taoensso.timbre :as timbre]
+            [clojure.test :as test]
+            [spexec.core :refer :all])
+  (:import [java.util.UUID]))
+
+(timbre/refer-timbre)
+(timbre/set-level! :info)
 
 (def example-scenario-unique "
 
@@ -52,34 +57,35 @@ Then I receive a 200 response
   [:steps
    [:step_sentence [:when] "I invoke a GET request on location URL"]
    [:step_sentence [:then] "I receive a 200 response"]]]]
-)
+  )
 
-(gherkin-parser example-scenario-multiple)
+(test/deftest test-parser []
+  (gherkin-parser example-scenario-multiple)
+  (gherkin-parser example-scenario-unique))
 
-(defwhen #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\"" [_ name desc]
-  (println "executing my product creation function with params " name desc)
-  {:name name :desc desc :qty (rand-int 50)})
+(defwhen #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\""
+  [_ name desc]
+  (let [id (rand-int 100000)]
+    {:id id
+     :name name
+     :desc desc
+     :qty (rand-int 50)
+     :location-url (str "http://example.com/product/" id)}))
 
-(defthen #"I receive a response with an id ([0-9]+)"
-  [_ id]
-  (println (str "executing the assertion that the product has been created with the id " id))
-  id)
+(defthen #"I receive a response with an id and a location URL"
+  [{:keys [id name desc qty location-url], :as previous-return} ]
+   previous-return)
 
-(exec-spec! (slurp "resources/product-catalog.feature"))
+(exec-spec (slurp "resources/product-catalog.feature"))
 
 (def step-str "(defgiven #\"this scenario in a file named (.*)\" [_ feature-file-name] (slurp feature-file-name))")
 (def generic-step "the step function: (defwhen #\"I run the scenarios with '(.+)'\" [spec-str my-data] (exec-spec! spec-str)(str \"processed\" my-data)))")
-
-(reset! regexes #{})
-(reset! regexes-to-fns {})
 
 (defgiven #"the step function: (.+)" [_ step-fn]
   ;;has to assoc the result, because the side effect in macros when runs normally are lost with eval
   ;;as eval runs in a fresh namespace (see http://stackoverflow.com/questions/6221716/variable-scope-eval-in-clojure)
   (let [[regex fn] (eval (read-string step-fn))]
-    (println "has executed " step-fn " extract regex " regex " and fn " fn)
-    ;;(swap! regexes conj regex)
-    ;;(swap! regexes-to-fns assoc (str regex) fn)
+    (debug "has executed " step-fn " extract regex " regex " and fn " fn)
     [regex fn]))
 
-(exec-spec! (slurp "resources/spexec.feature"))
+(exec-spec (slurp "resources/spexec.feature"))

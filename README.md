@@ -1,27 +1,133 @@
-# Spexec - A Clojure Library for [Behavior Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) (BDD)
+# Spexec - **_Exec_**utable **_Spe_**cification in Clojure
+![Spexec logo](https://raw.github.com/jgrodziski/spexec/spexec.png)
 
-## Rationale
+Spexec is an **_Exec_**utable **_Spe_**cification [Clojure](http://clojure.org/) library aimed at writing and executing usage scenarios following the [Behavior-Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) - BDD - style. It has an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html), following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) (in short: Given/When/Then), and execute each scenario's _steps_ with associated Clojure code.
 
-I wanted a BDD framework with an external DSL following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin). The previous BDD attempt I known in Clojure were all with an internal DSL. I prefer an external one that is easier to share with a domain expert.
+* [Installation](#installation)
+* [Basic Usage](#basic-usage)
+	* [Write Scenarios in plain text]()
+	* [Map steps to Clojure code]()
+	* [Execute Specification and get a report]()
+* [Documentation](#documentation)
+* [Rationale](#rationale)
+* [ToDoS](#todos)
 
-I use the regex facility provided by Clojure (#"regex expression"), not the most readable with all that parens, sharps, double-quote, etc. but the most supple when you need to extract specific data from your sentence.
+## Installation
 
-## Usage
+```clojure
+;;add this dependency to your project.clj file
+[spexec "1.0.0"]
+;;then in your ns statement
+(:require [spexec :refer :all])
 
-There are 3 macros available: ```clojure defgiven```, ```clojure defwhen```, ```clojure defthen```
-They wants 3 params: a regex for matching a step in the scenarios and a params vector and body function.
-Your regex should "group" expression with parens if you want to extract value as string that will be provided to your step functions.
+```
 
-### chaining steps
-Steps often produce side effect or retrieve some stuffs (fn, data) to be used in the next ones, you can store your state in your code or in the scenario itself, but I think an easier mechanism is to think of the steps like a chain and pass a data structure from the return of a step to the input of the next one (very similar to [ring handlers](https://github.com/ring-clojure/ring/wiki/Concepts) for instance). So, each step functio's return is taken as the input for the next step as the first argument (you can name it _ if you don't need it). A good practice would be to use a map or vector and then destructure it as the first param of the next step, like :
+[![Clojars Project](http://clojars.org/spexec/latest-version.svg)](http://clojars.org/spexec)
+
+## Basic Usage
+
+
+### Write Scenarios in plain text
+First, write your scenarios in plain text using the [Gherkin grammar]((https://github.com/cucumber/cucumber/wiki/Gherkin)) in a file or String :
+
+```Cucumber
+Scenario: create a new product
+# this is a comment
+When I create a new product with name "iphone 6" and description "awesome phone"
+Then I receive a response with an id 56422 and a location URL
+# this a second comment
+# on two lines
+When I invoke a GET request on location URL
+Then I receive a 200 response
+
+Scenario: get product info
+When I invoke a GET request on location URL
+Then I receive a 200 response
+```
+
+### Map steps to Clojure code
+
+Then write the code that will gets executed for each scenario steps:
+
+```clojure
+
+(defwhen #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\"" 
+[_ name desc]
+  (println "executing my product creation function with params " name desc)
+  (let [id (UUID/next.)]
+  	{:id (UUID/next. ) 
+  	 :name name 
+  	 :desc desc 
+  	 :qty (rand-int 50) 
+  	 :location-url (str "http://example.com/product/" id)}))
+
+
+(defthen #"I receive a response with an id ([0-9]+)"
+  [_ id]
+  (println (str "executing the assertion that the product has been created with the id " id))
+  id)
+
+
+```
+
+### Execute Specification
+
+```Clojure
+(exec-spec! (slurp "resources/product-catalog.feature"))
+```
+
+Get a report of the execution as a Clojure data structure returned by the ```exec-spec!``` function
+
+```Clojure
+{"scenario 1 sentence" 
+    [["step sentence 1.1 executed" {:result "data structure"}]
+     ["step sentence 1.2 executed" {:result "data structure"}]
+     ["step sentence 1.3 executed" {:result "data structure"}]]
+ "scenario 2 sentence" 
+    [["step sentence 2.1 executed" {:result "data structure"}]
+     ["step sentence 2.2 executed" {:result "data structure"}]
+     ["step sentence 2.3 executed" {:result "data structure"}]]}
+```
+## Documentation
+
+### Macros
+There are 3 macros available for given/when/then:
+
+```clojure
+;; a regex for matching a step in the scenarios
+;; a params vector: 
+;;    the first param is the return of the previous step (nil if first step)
+;;    then one param for each regex group (aka. something in parens (...)) you define.
+;; a body function.
+
+(defgiven regex params body)
+(defwhen regex params body)
+(defthen regex params body)
+```
+
+Macros are here for convenience, plain-old function are also available (just think to correctly prefix the require to avoid collision with the [clojure.core/when](http://grimoire.arrdem.com/1.6.0/clojure.core/when)), you have to provide the step execution function as parameters with the function having groups count + 1 parameters (one for the previous step return and one params for each groups in the regex).
+
+```clojure
+(ns mystuff
+  (:require [spexec :as spec]))
+...
+(spec/given regex fn)
+(spec/when regex fn)
+(spec/then regex fn)
+```
+
+### Chaining steps
+Steps often produce side effect or retrieve some stuffs (fn, data) to be used in the next ones, you can store your state in your code or in the scenario itself, but I think an easier mechanism is to think of the steps like a chain and pass a data structure from the return of a step to the input of the next one (very similar to [ring handlers](https://github.com/ring-clojure/ring/wiki/Concepts) or chain of responsibility for instance). So, each step functio's return is taken as the input for the next step as the first argument (you can name it _ if you don't need it). A good practice would be to use a map or vector and then destructure it as the first param of the next step, like :
 
 ```clojure
 (defwhen #"my sentence to be matched with (.*) and (.*)" 
-		 [[key1-in-previous-result k2] param1 param2] 
-		 	(do-something param1 k2 param2) ...)
+         [[key1-in-previous-result k2] param1 param2] 
+         (do-something param1 k2 param2) ...)
 ```
 
-I use Spexec to test Spexec (yes it eats its own dog food, pretty amazing :-) I think only a Lisp language allow to do that), only the bootstrap step "Given the step function" is needed:
+### Advanced usage
+
+I use Spexec to test Spexec (yes it eats its own dog food, pretty amazing :-) only a dynamic language like Lisp can do that as easily), only the bootstrap step "Given the step function" is needed:
 
 ```gherkin
 Scenario: a scenario that test spexec using spexec
@@ -34,12 +140,37 @@ Then I should get 'processedmydatavalues' from scenario file 'resources/spexec.f
 ```
 
 ```clojure
-
 (defgiven #"the step function: (.+)" [_ step-fn]
    (eval (read-string step-fn)))
-
 ```
+
+### Run the scenarios with each steps
+
+### Logging
+
+## Rationale
+
+I'm used to [JBehave](http://jbehave.org/) and I wanted a BDD framework with an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html) following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) but also with an easy and fast setup and with steps written in [Clojure](http://clojure.org/). The previous BDD attempt I known in Clojure were all with an [internal DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html). I prefer an external one because I think it's easier to share the scenarios with a domain expert.
+
+I use the [regex facility](http://clojure.org/other_functions) provided by Clojure (#"regex expression"), not the most readable with all that parens, sharps, double-quote, etc. but the most supple when you need to extract specific data from your sentence. 
+The gherkin grammar parser is written with the amazing [Instaparse](https://github.com/Engelberg/instaparse) library (I thumbs up for the ClojureScript port by the way!).
+Logging is done using the great [Timbre](https://github.com/ptaoussanis/timbre) logging library.
+
+## TODOS
+
+* logging with timbre
+* return execution report as a data structure from the exec-spec! function
+* stop-on-failure? as an option for execution
+* use deftest for the testing
 
 ## License
 
-Distributed under the Eclipse Public License either version 1.0.
+Spexec is released under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+
+Copyright © 2014 Jérémie Grodziski jeremie@grodziski.com
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
