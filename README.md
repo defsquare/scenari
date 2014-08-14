@@ -73,10 +73,10 @@ Then write the code that will gets executed for each scenario steps:
 ### Execute Specification
 
 ```Clojure
-(exec-spec! (slurp "resources/product-catalog.feature"))
+(exec-spec (slurp "resources/product-catalog.feature"))
 ```
 
-Get a report of the execution as a Clojure data structure returned by the ```exec-spec!``` function
+Get a report of the execution as a Clojure data structure returned by the ```exec-spec``` function
 
 ```Clojure
 {"scenario 1 sentence" 
