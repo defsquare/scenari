@@ -1,7 +1,7 @@
-# Spexec - **_Exec_**utable **_Spe_**cification in Clojure
-![Spexec logo](https://raw.github.com/jgrodziski/spexec/spexec.png)
+# Spexec - Executable Specification in Clojure
+![Spexec logo](https://raw.githubusercontent.com/zenmodeler/spexec/master/spexec.png)
 
-Spexec is an **_Exec_**utable **_Spe_**cification [Clojure](http://clojure.org/) library aimed at writing and executing usage scenarios following the [Behavior-Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) - BDD - style. It has an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html), following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) (in short: Given/When/Then), and execute each scenario's _steps_ with associated Clojure code.
+Spexec is an Executable Specification [Clojure](http://clojure.org/) library aimed at writing and executing usage scenarios following the [Behavior-Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) - BDD - style. It has an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html), following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) (in short: Given/When/Then), and execute each scenario's _steps_ with associated Clojure code.
 
 * [Installation](#installation)
 * [Basic Usage](#basic-usage)
@@ -158,7 +158,6 @@ Logging is done using the great [Timbre](https://github.com/ptaoussanis/timbre) 
 
 ## TODOS
 
-* logging with timbre
 * return execution report as a data structure from the exec-spec! function
 * stop-on-failure? as an option for execution
 * use deftest for the testing
