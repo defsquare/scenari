@@ -155,26 +155,41 @@
 (defn print-fn-skeleton [step-sentence]
   (println (timbre/color-str :yellow "No function found we suggest adding: (defwhen #\"" step-sentence "\" [param1 param2] (do \"something\"))")))
 
+(defn- exec-scenario [scenario-ast]
+  ;;for each step sentence, find the fn which have a regex that match
+  ;;execute that fn and input the return as first param of the next fn
+  (println  "Run Scenario:" (scenario-sentence scenario-ast))
+  (loop [step-sentences (step-sentences (steps-sentence-ast scenario-ast))
+         prev-ret       nil
+         scenario-acc []]
+    (if-let [step-sentence (first step-sentences)]
+      (let [[fn regex] (matching-fn step-sentence)]
+        (trace "regex and fn " regex fn)
+        (if (nil? fn)
+          ;;now execute the fn with the param value extracted from the step sentence
+          ;;and keep the return value to input it for the next step
+          (do (print-fn-skeleton step-sentence)
+              (recur (rest step-sentences)
+                     nil
+                     scenario-acc))
+          (let [result (apply fn prev-ret (params-from-steps regex step-sentence))]
+            (with-pprint-dispatch spexec-pprint-dispatch (pprint step-sentence))
+            (with-pprint-dispatch spexec-pprint-dispatch (pprint (str "=> " result)))
+            (trace "executed fn " fn " with " prev-ret " and "  (params-from-steps regex step-sentence) ", result => " result)
+            (recur (rest step-sentences)
+                   result
+                   (conj scenario-acc [step-sentence result])))))
+      (cons (scenario-sentence scenario-ast) scenario-acc)))
+  )
+
+
 ;;TODO include deftest with the macro define in the above and with test-ns-hook for running the test in the correct order
 (defn exec-spec [spec-str]
   ;;for each scenarios
-  (doseq [scenario-ast (scenarios-ast (gherkin-parser spec-str))]
-    ;;for each step sentence, find the fn which have a regex that match
-    ;;execute that fn and input the return as first param of the next fn
-    (println  "Run Scenario:" (scenario-sentence scenario-ast))
-    (loop [step-sentences (step-sentences (steps-sentence-ast scenario-ast))
-           prev-ret       nil]
-      (if-let [step-sentence (first step-sentences)]
-        (let [[fn regex] (matching-fn step-sentence)]
-          (trace "regex and fn " regex fn)
-          (if (nil? fn)
-            ;;now execute the fn with the param value extracted from the step sentence
-            ;;and keep the return value to input it for the next step
-            (do (print-fn-skeleton step-sentence)
-                (recur (rest step-sentences) nil))
-            (let [result (apply fn prev-ret (params-from-steps regex step-sentence))]
-              (with-pprint-dispatch spexec-pprint-dispatch (pprint step-sentence))
-              (with-pprint-dispatch spexec-pprint-dispatch (pprint (str "=> " result)))
-              (trace "executed fn " fn " with " prev-ret " and "  (params-from-steps regex step-sentence) ", result => " result)
-              (recur (rest step-sentences) result))))))
-    (print "\n")))
+  (loop [scenarios (scenarios-ast (gherkin-parser spec-str))
+         spec-acc []]
+    (if-let [scenario-ast (first scenarios)]
+      (let [exec-result (exec-scenario scenario-ast)]
+        (recur (rest scenarios) (conj spec-acc exec-result))))
+    (print "\n")
+    spec-acc))
