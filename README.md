@@ -51,7 +51,7 @@ Then write the code that will gets executed for each scenario steps:
 
 ```clojure
 
-(defwhen #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\"" 
+(defwhen #"I create a new product with name \"(.*)\" and description \"(.*)\"" 
 [_ name desc]
   (println "executing my product creation function with params " name desc)
   (let [id (UUID/next.)]
@@ -62,7 +62,7 @@ Then write the code that will gets executed for each scenario steps:
   	 :location-url (str "http://example.com/product/" id)}))
 
 
-(defthen #"I receive a response with an id ([0-9]+)"
+(defthen #"I receive a response with an id (.+)"
   [_ id]
   (println (str "executing the assertion that the product has been created with the id " id))
   id)
