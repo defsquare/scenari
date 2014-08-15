@@ -161,7 +161,7 @@
   (println  "Run Scenario:" (scenario-sentence scenario-ast))
   (loop [step-sentences (step-sentences (steps-sentence-ast scenario-ast))
          prev-ret       nil
-         scenario-acc []]
+         scenario-acc [:scenario (scenario-sentence scenario-ast)]]
     (if-let [step-sentence (first step-sentences)]
       (let [[fn regex] (matching-fn step-sentence)]
         (trace "regex and fn " regex fn)
@@ -171,7 +171,8 @@
           (do (print-fn-skeleton step-sentence)
               (recur (rest step-sentences)
                      nil
-                     scenario-acc))
+                     (conj scenario-acc [step-sentence nil])))
+          ;;fn found with a regex that match the sentence
           (let [result (apply fn prev-ret (params-from-steps regex step-sentence))]
             (with-pprint-dispatch spexec-pprint-dispatch (pprint step-sentence))
             (with-pprint-dispatch spexec-pprint-dispatch (pprint (str "=> " result)))
@@ -179,9 +180,8 @@
             (recur (rest step-sentences)
                    result
                    (conj scenario-acc [step-sentence result])))))
-      (cons (scenario-sentence scenario-ast) scenario-acc)))
+      scenario-acc))
   )
-
 
 ;;TODO include deftest with the macro define in the above and with test-ns-hook for running the test in the correct order
 (defn exec-spec [spec-str]
@@ -190,6 +190,6 @@
          spec-acc []]
     (if-let [scenario-ast (first scenarios)]
       (let [exec-result (exec-scenario scenario-ast)]
-        (recur (rest scenarios) (conj spec-acc exec-result))))
-    (print "\n")
-    spec-acc))
+        (recur (rest scenarios) (conj spec-acc exec-result)))
+      (do (print "\n")
+          spec-acc))))
