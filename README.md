@@ -76,7 +76,7 @@ Then write the code that will gets executed for each scenario steps:
 (exec-spec (slurp "resources/product-catalog.feature"))
 ```
 
-Get a report of the execution as a Clojure data structure returned by the ```exec-spec``` function (NOT YET AVAILABLE...)
+Get a report of the execution as a Clojure data structure returned by the ```exec-spec``` function
 
 ```Clojure
 {"scenario 1 sentence" 
