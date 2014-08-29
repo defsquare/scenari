@@ -158,7 +158,6 @@ Logging is done using the great [Timbre](https://github.com/ptaoussanis/timbre) 
 
 ## TODOS
 
-* return execution report as a data structure from the exec-spec! function
 * stop-on-failure? as an option for execution
 * use deftest for the testing
 
