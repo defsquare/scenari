@@ -88,4 +88,4 @@ Then I receive a 200 response
     (debug "has executed " step-fn " extract regex " regex " and fn " fn)
     [regex fn]))
 
-(exec-spec (java.io.File. "resources/spexec.feature"))
+(exec-spec "resources/spexec.feature")
