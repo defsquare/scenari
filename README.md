@@ -18,7 +18,7 @@ Spexec is an Executable Specification [Clojure](http://clojure.org/) library aim
 ;;add this dependency to your project.clj file
 [spexec "1.0.0"]
 ;;then in your ns statement
-(:require [spexec :refer :all])
+(:require [spexec.core :refer :all])
 
 ```
 
