@@ -184,12 +184,33 @@
   )
 
 ;;TODO include deftest with the macro define in the above and with test-ns-hook for running the test in the correct order
-(defn exec-spec [spec-str]
+(defmulti exec-spec
+  "Read the spec and execute each step with the code setup by the defgiven, defwhen and defthen macro"
+  (fn [spec]
+    (println (type spec))
+    (if (and (= (type spec) java.lang.String)
+                     (.exists (java.io.File. spec)))
+              java.io.File
+              (type spec)))
+  :default java.io.File)
+
+(defmethod exec-spec
+  java.io.File
+  [spec-file]
+  (exec-spec (slurp spec-file)))
+
+(defmethod exec-spec
+  java.lang.String
+  [spec-str]
   ;;for each scenarios
-  (loop [scenarios (scenarios-ast (gherkin-parser spec-str))
-         spec-acc []]
-    (if-let [scenario-ast (first scenarios)]
-      (let [exec-result (exec-scenario scenario-ast)]
-        (recur (rest scenarios) (conj spec-acc exec-result)))
-      (do (print "\n")
-          spec-acc))))
+  (let [spec-parse-tree (gherkin-parser spec-str)]
+    (if (insta/failure? spec-parse-tree)
+      (do (println "The supplied spec contains a parse error, please fix it")
+          (insta/get-failure spec-parse-tree))
+      (loop [scenarios (scenarios-ast spec-parse-tree)
+             spec-acc []]
+        (if-let [scenario-ast (first scenarios)]
+          (let [exec-result (exec-scenario scenario-ast)]
+            (recur (rest scenarios) (conj spec-acc exec-result)))
+          (do (print "\n")
+              spec-acc))))))
