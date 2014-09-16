@@ -18,7 +18,7 @@ Spexec is an Executable Specification [Clojure](http://clojure.org/) library aim
 ;;add this dependency to your project.clj file
 [spexec "1.0.0"]
 ;;then in your ns statement
-(:require [spexec :refer :all])
+(:require [spexec.core :refer :all])
 
 ```
 
@@ -76,7 +76,7 @@ Then write the code that will gets executed for each scenario steps:
 (exec-spec (slurp "resources/product-catalog.feature"))
 ```
 
-Get a report of the execution as a Clojure data structure returned by the ```exec-spec``` function (NOT YET AVAILABLE...)
+Get a report of the execution as a Clojure data structure returned by the ```exec-spec``` function
 
 ```Clojure
 {"scenario 1 sentence" 
@@ -158,7 +158,6 @@ Logging is done using the great [Timbre](https://github.com/ptaoussanis/timbre) 
 
 ## TODOS
 
-* return execution report as a data structure from the exec-spec! function
 * stop-on-failure? as an option for execution
 * use deftest for the testing
 
