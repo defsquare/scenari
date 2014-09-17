@@ -1,4 +1,4 @@
-(defproject spexec "1.0.2"
+(defproject spexec "1.0.3"
               :description "A BDD - Behavior Driven Development - library for Clojure"
               :url "http://github.com/zenmodeler/spexec"
               :dependencies [[org.clojure/clojure "1.6.0"]

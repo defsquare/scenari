@@ -31,7 +31,7 @@
 
 (def gherkin-parser (insta/parser
           "SPEC               = <whitespace?> narrative? <whitespace?> (scenario <eol> <eol?>)*
-           narrative          = <'Narrative:'> <eol>? (in_order_to as_a I_want_to | as_a I_want_to so_that )?
+           narrative          = <'Narrative:'> <eol>? (as_a I_want_to in_order_to | as_a I_want_to so_that )?
            in_order_to        = <'In order to '> #'.*' <eol>
            as_a               = <'As a '> #'.*' <eol>
            I_want_to          = <'I want to '> #'.*' <eol>
