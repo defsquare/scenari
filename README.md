@@ -16,7 +16,7 @@ Spexec is an Executable Specification [Clojure](http://clojure.org/) library aim
 
 ```clojure
 ;;add this dependency to your project.clj file
-[spexec "1.0.0"]
+[spexec "1.0.1"]
 ;;then in your ns statement
 (:require [spexec.core :refer :all])
 
@@ -29,7 +29,7 @@ Spexec is an Executable Specification [Clojure](http://clojure.org/) library aim
 
 ### Write Scenarios in plain text
 First, write your scenarios in plain text using the [Gherkin grammar]((https://github.com/cucumber/cucumber/wiki/Gherkin)) in a file or String :
-
+You can add a "narrrative" for all your scenarios with the story syntax at the beginning of the story file (As a role I want to do something In order to get value)
 ```Cucumber
 Scenario: create a new product
 # this is a comment

@@ -137,7 +137,7 @@
   (let [elements (elements-ast spec-ast)]
     (if (= (ffirst elements) :narrative)
       (first elements)
-      nil))))
+      nil)))
 
 (defn narrative-str [narrative-ast]
   (apply str(map (fn [e]
