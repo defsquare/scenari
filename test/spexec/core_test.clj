@@ -21,7 +21,13 @@ Then I receive a 200 response
 
 ")
 
-(def example-scenario-multiple "Scenario: create a new product
+(def example-scenario-multiple "
+Narrative:
+As a user
+I want to login
+So that I gain access to the protected resource
+
+Scenario: create a new product
 # this is a comment
 When I create a new product with name \"iphone 6\" and description \"awesome phone\"
 Then I receive a response with an id 56422
@@ -42,22 +48,25 @@ Then I receive a 200 response
 (def my-regex #"I create a new product with name \"([a-z 0-9]*)\" and description \"([a-z 0-9]*)\"")
 
 (def example-ast [:SPEC
- [:scenario
-  [:scenario_sentence "create a new product"]
-  [:steps
-   [:step_sentence
-    [:when]
-    "I create a new product with name \"iphone 6\" and description \"awesome phone\""]
-   [:step_sentence [:then] "I receive a response with an id 56422"]
-   [:step_sentence [:and] "a location URL"]
-   [:step_sentence [:when] "I invoke a GET request on location URL"]
-   [:step_sentence [:then] "I receive a 200 response"]]]
- [:scenario
-  [:scenario_sentence "get product info"]
-  [:steps
-   [:step_sentence [:when] "I invoke a GET request on location URL"]
-   [:step_sentence [:then] "I receive a 200 response"]]]]
-  )
+                  [:narrative
+                   [:as_a "product manager"]
+                   [:I_want_to "add a new product to the catalog"]
+                   [:so_that "I fill the catalog with interesting product"]]
+                  [:scenario
+                   [:scenario_sentence "create a new product"]
+                   [:steps
+                    [:step_sentence
+                     [:when]
+                     "I create a new product with name \"iphone 6\" and description \"awesome phone\""]
+                    [:step_sentence [:then] "I receive a response with an id 56422"]
+                    [:step_sentence [:and] "a location URL"]
+                    [:step_sentence [:when] "I invoke a GET request on location URL"]
+                    [:step_sentence [:then] "I receive a 200 response"]]]
+                  [:scenario
+                   [:scenario_sentence "get product info"]
+                   [:steps
+                    [:step_sentence [:when] "I invoke a GET request on location URL"]
+                    [:step_sentence [:then] "I receive a 200 response"]]]])
 
 (test/deftest test-parser []
   (gherkin-parser example-scenario-multiple)

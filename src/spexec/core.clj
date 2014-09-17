@@ -30,7 +30,13 @@
 (timbre/refer-timbre)
 
 (def gherkin-parser (insta/parser
-          "SPEC               = <whitespace?> (scenario <eol> <eol?>)*
+          "SPEC               = <whitespace?> narrative? <whitespace?> (scenario <eol> <eol?>)*
+           narrative          = <'Narrative:'> <eol>? (in_order_to as_a I_want_to | as_a I_want_to so_that )?
+           in_order_to        = <'In order to '> #'.*' <eol>
+           as_a               = <'As a '> #'.*' <eol>
+           I_want_to          = <'I want to '> #'.*' <eol>
+           so_that            = <'So that '> #'.*' <eol>
+           NarrativeStartingWord = ('In order to' | 'As a' | 'I want to' | 'So that')
            scenario           = <scenario_keyword> scenario_sentence <eol> steps
            <scenario_keyword> = 'Scenario: '
            <comment>          = (comment_line whitespace?)*
@@ -118,8 +124,31 @@
      (step-then ~regex step-fn#)))
 
 ;;TODO should use enlive instead of zipper for AST selection ?
-(defn scenarios-ast [spec-ast]
+(defn- elements-ast [spec-ast]
   (-> (zip/vector-zip spec-ast) zip/down zip/rights))
+
+(defn scenarios-ast [spec-ast]
+  (let [elements (elements-ast spec-ast)]
+    (if (= (ffirst elements) :narrative)
+      (rest elements)
+      elements)))
+
+(defn narrative-ast [spec-ast]
+  (let [elements (elements-ast spec-ast)]
+    (if (= (ffirst elements) :narrative)
+      (first elements)
+      nil))))
+
+(defn narrative-str [narrative-ast]
+  (apply str(map (fn [e]
+                   (if (instance? java.lang.String e)
+                     e
+                     (case e
+                       :narrative "Narrative: "
+                       :as_a "As a "
+                       :in_order_to " in order to "
+                       :I_want_to " I want to "
+                       :so_that " so that "))) (flatten narrative-ast))))
 
 (defn scenario-sentence [scenario-ast]
   (-> (zip/vector-zip scenario-ast) zip/down zip/right zip/down zip/right zip/node))
@@ -186,6 +215,9 @@
 ;;TODO include deftest with the macro define in the above and with test-ns-hook for running the test in the correct order
 (defmulti exec-spec
   "Read the spec and execute each step with the code setup by the defgiven, defwhen and defthen macro"
+  ;; the dispatch fn do that on the type of the parameter but
+  ;; if it's string, it first check if it's the name of the file
+  ;; otherwise considers it's the spec itself
   (fn [spec]
     (println (type spec))
     (if (and (= (type spec) java.lang.String)
@@ -208,7 +240,9 @@
       (do (println "The supplied spec contains a parse error, please fix it")
           (insta/get-failure spec-parse-tree))
       (loop [scenarios (scenarios-ast spec-parse-tree)
-             spec-acc []]
+             spec-acc [(do (let [narrative (narrative-str (narrative-ast spec-parse-tree))]
+                             (println narrative)
+                             narrative))]]
         (if-let [scenario-ast (first scenarios)]
           (let [exec-result (exec-scenario scenario-ast)]
             (recur (rest scenarios) (conj spec-acc exec-result)))
