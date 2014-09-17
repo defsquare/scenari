@@ -105,6 +105,19 @@
   "create and associate a regex to a function that will match the steps string in scenarios"
   (store-fns-and-regexes! regex fn))
 
+(def before (atom nil))
+(def after  (atom nil))
+
+(defn defbefore
+  "Define a function that will get executed BEFORE every steps when exec-spec will be invoked "
+  [f]
+  (reset! before f))
+
+(defn defafter
+  "Define a function that will get executed AFTER every steps when exec-spec will be invoked (or in case of failure)"
+  [f]
+  (reset! after f))
+
 (defmacro defgiven
   "create and associate a regex to function params and body that will match the steps string in scenarios"
   [regex params & body]
@@ -235,16 +248,18 @@
   java.lang.String
   [spec-str]
   ;;for each scenarios
-  (let [spec-parse-tree (gherkin-parser spec-str)]
-    (if (insta/failure? spec-parse-tree)
-      (do (println "The supplied spec contains a parse error, please fix it")
-          (insta/get-failure spec-parse-tree))
-      (loop [scenarios (scenarios-ast spec-parse-tree)
-             spec-acc [(do (let [narrative (narrative-str (narrative-ast spec-parse-tree))]
-                             (println narrative)
-                             narrative))]]
-        (if-let [scenario-ast (first scenarios)]
-          (let [exec-result (exec-scenario scenario-ast)]
-            (recur (rest scenarios) (conj spec-acc exec-result)))
-          (do (print "\n")
-              spec-acc))))))
+  (do (@before)
+      (let [spec-parse-tree (gherkin-parser spec-str)]
+        (if (insta/failure? spec-parse-tree)
+          (do (println "The supplied spec contains a parse error, please fix it, if you tried to supply a filename it was not found, please verify the relative path (btw that test get executed in the following dir:" (java.lang.System/getProperty "user.dir") ")")
+              (insta/get-failure spec-parse-tree))
+          (loop [scenarios (scenarios-ast spec-parse-tree)
+                 spec-acc [(do (let [narrative (narrative-str (narrative-ast spec-parse-tree))]
+                                 (println narrative)
+                                 narrative))]]
+            (if-let [scenario-ast (first scenarios)]
+              (let [exec-result (exec-scenario scenario-ast)]
+                (recur (rest scenarios) (conj spec-acc exec-result)))
+              (do (print "\n")
+                  spec-acc)))))
+      (@after)))

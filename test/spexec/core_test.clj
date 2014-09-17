@@ -85,6 +85,9 @@ Then I receive a 200 response
   [{:keys [id name desc qty location-url], :as previous-return} ]
    previous-return)
 
+(defbefore (fn [] (println "this function should get executed each time before running scenarios")))
+(defafter (fn [] (println "this function should get executed each time after running scenarios")))
+
 (exec-spec (slurp "resources/product-catalog.feature"))
 
 (def step-str "(defgiven #\"this scenario in a file named (.*)\" [_ feature-file-name] (slurp feature-file-name))")
