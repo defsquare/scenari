@@ -8,6 +8,7 @@ Spexec is an Executable Specification [Clojure](http://clojure.org/) library aim
 	* [Write Scenarios in plain text]()
 	* [Map steps to Clojure code]()
 	* [Execute Specification and get a report]()
+  * [Define "before" and "after" code]()
 * [Documentation](#documentation)
 * [Rationale](#rationale)
 * [ToDoS](#todos)
@@ -73,7 +74,7 @@ Then write the code that will gets executed for each scenario steps:
 ### Execute Specification
 
 ```Clojure
-(exec-spec (slurp "resources/product-catalog.feature"))
+(exec-spec "resources/product-catalog.feature")
 ```
 
 Get a report of the execution as a Clojure data structure returned by the ```exec-spec``` function
@@ -88,6 +89,18 @@ Get a report of the execution as a Clojure data structure returned by the ```exe
      ["step sentence 2.2 executed" {:result "data structure"}]
      ["step sentence 2.3 executed" {:result "data structure"}]]}
 ```
+
+### Define "Before" and "After" code
+
+```defbefore``` and ```defafter``` are two functions that take another function as a parameter that will get executed respectively before and after the scenarios execution.
+It's useful to setup a resource (like an http server or a database) and shutdown it after all scenarios get executed. You can define several before or after functions, they will all be executed before or after scenarios, though with no guarantee for their execution order.
+
+Example:
+
+```Clojure
+(defbefore (fn [] (println "that anonymous function gets executed before all scenarios")))
+```
+
 ## Documentation
 
 ### Macros

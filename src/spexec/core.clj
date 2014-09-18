@@ -69,7 +69,6 @@
 (defn rand-from-to [from to] (+ from (rand-int to)))
 
 (def regexes-to-fns (atom {}));;store the regex as a string, as keys can't be regex in a map and also because same regex expression are different object in Java...:(
-;;(def regexes (atom #{}));;regex can't be a key in a map, so the key are their string in the steps map, here the regexes are stored for easy retrieving
 
 (defn spexec-pprint-dispatch [str]
   (if (reduce (fn [prev curr] (or prev (.startsWith str curr)))
@@ -89,7 +88,6 @@
                (rand-from-to 1 100000))))
 
 (defn store-fns-and-regexes! [regex fn]
-   ;;(swap! regexes conj regex)
    (swap! regexes-to-fns assoc (str regex) fn)
    [regex fn])
 
@@ -215,7 +213,11 @@
                      nil
                      (conj scenario-acc [step-sentence nil])))
           ;;fn found with a regex that match the sentence
-          (let [result (apply fn prev-ret (params-from-steps regex step-sentence))]
+          (let [result
+                (try
+                  (apply fn prev-ret (params-from-steps regex step-sentence))
+                  (catch java.lang.Exception e {:failure true :message (.getMessage e)}))
+                ]
             (with-pprint-dispatch spexec-pprint-dispatch (pprint step-sentence))
             (with-pprint-dispatch spexec-pprint-dispatch (pprint (str "=> " result)))
             (trace "executed fn " fn " with " prev-ret " and "  (params-from-steps regex step-sentence) ", result => " result)
@@ -232,7 +234,6 @@
   ;; if it's string, it first check if it's the name of the file
   ;; otherwise considers it's the spec itself
   (fn [spec]
-    (println (type spec))
     (if (and (= (type spec) java.lang.String)
                      (.exists (java.io.File. spec)))
               java.io.File
