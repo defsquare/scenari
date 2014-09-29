@@ -57,6 +57,18 @@
            number             = #'[0-9]+'
            "))
 
+(def sentence-parser (insta/parser
+                      "SENTENCE       = <whitespace?> step_keyword (words | data)*
+                       given          = <'Given '>
+                       when           = <'When '>
+                       then           = <'Then '>
+                       and            = <'And '>
+                       words          = #'[a-zA-Z0-9\"./\\ ]+'
+                       data           = <\"'\"> #'[a-zA-Z0-9./\\ ]+' <\"'\">
+                       <step_keyword> = given | when | then | and
+                       <whitespace>   = #'\\s+'
+                      "))
+
 (def keywords-str {:given "Given "
                    :when "When "
                    :then "Then "
@@ -103,18 +115,18 @@
   "create and associate a regex to a function that will match the steps string in scenarios"
   (store-fns-and-regexes! regex fn))
 
-(def before (atom nil))
-(def after  (atom nil))
+(def before (atom []))
+(def after  (atom []))
 
 (defn defbefore
   "Define a function that will get executed BEFORE every steps when exec-spec will be invoked "
   [f]
-  (reset! before f))
+  (swap! before conj f))
 
 (defn defafter
   "Define a function that will get executed AFTER every steps when exec-spec will be invoked (or in case of failure)"
   [f]
-  (reset! after f))
+  (swap! after conj f))
 
 (defmacro defgiven
   "create and associate a regex to function params and body that will match the steps string in scenarios"
@@ -184,7 +196,7 @@
       (throw (RuntimeException. (str (count matching-regexes) " matching functions were found for the following step sentence:\n " step-sentence ", please refine your regexes that match: \n" (apply str matching-regexes)))))
     [(get @regexes-to-fns (str (first matching-regexes))) (first matching-regexes)]))
 
-(defnp params-from-steps
+(defn params-from-steps
   "return a vector of groups the regex found in the step sentence, nil otherwise"
   [regex step-sentence]
   (let [find-result (re-find regex step-sentence)]
@@ -192,8 +204,35 @@
       (rest find-result)
       nil)))
 
+(defn- extract-data-as-args [sentence-elements]
+  (let [data-count (count (filter (fn [c] (= (first c) :data)) sentence-elements))
+        data-args (clojure.string/join " " (for [i (range data-count)] (str "arg" i)))]
+    (str "[" data-args "]")))
+
+(defnp generate-step-fn [step-sentence]
+  (let [sentence-elements (rest (sentence-parser step-sentence))
+        step-type (ffirst sentence-elements)]
+    (str (case step-type
+           :given "(defgiven #\""
+           :when  "(defwhen #\""
+           :then  "(defthen #\""
+           "(defwhen #\"")
+        (apply str (map (fn [c]
+                          (let [what? (first c)]
+                             (case what?
+                              :words (second c)
+                              :data "'(.*)'"
+                              "test"))) (rest sentence-elements)))
+         "\"  "
+         (extract-data-as-args sentence-elements)
+         (case step-type
+           :given "  (do \"setup or assert correct tested component state\"))"
+           :when  "  (do \"something\"))"
+           :then  "  (do \"assert the result of when step\"))"
+           "  (do \"something\"))"))))
+
 (defn print-fn-skeleton [step-sentence]
-  (println (timbre/color-str :yellow "No function found we suggest adding: (defwhen #\"" step-sentence "\" [param1 param2] (do \"something\"))")))
+  (println (timbre/color-str :yellow "No function found for step you may add: \n   " (generate-step-fn step-sentence))))
 
 (defn- exec-scenario [scenario-ast]
   ;;for each step sentence, find the fn which have a regex that match
@@ -206,8 +245,9 @@
       (let [[fn regex] (matching-fn step-sentence)]
         (trace "regex and fn " regex fn)
         (if (nil? fn)
-          ;;now execute the fn with the param value extracted from the step sentence
-          ;;and keep the return value to input it for the next step
+          ;; now execute the fn with the param value extracted from the step sentence
+          ;; and keep the return value to input it for the next step
+          ;; so if you want to accumulate the results, just provide a coll and conj on it
           (do (print-fn-skeleton step-sentence)
               (recur (rest step-sentences)
                      nil
@@ -249,7 +289,7 @@
   java.lang.String
   [spec-str]
   ;;for each scenarios
-  (do (@before)
+  (do (doseq [before-fn @before] (before-fn))
       (let [spec-parse-tree (gherkin-parser spec-str)]
         (if (insta/failure? spec-parse-tree)
           (do (println "The supplied spec contains a parse error, please fix it, if you tried to supply a filename it was not found, please verify the relative path (btw that test get executed in the following dir:" (java.lang.System/getProperty "user.dir") ")")
@@ -263,4 +303,4 @@
                 (recur (rest scenarios) (conj spec-acc exec-result)))
               (do (print "\n")
                   spec-acc)))))
-      (@after)))
+      (doseq [after-fn @after] (after-fn))))
