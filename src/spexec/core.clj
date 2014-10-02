@@ -22,10 +22,11 @@
 ;
 
 (ns spexec.core
-  (:require [instaparse.core :as insta]
+   (:require [instaparse.core :as insta]
             [taoensso.timbre :as timbre]
             [clojure.string :as string]
             [clojure.zip :as zip]
+            [clojure.edn :only read-string]
             [clojure.pprint :refer :all]))
 (timbre/refer-timbre)
 
@@ -58,13 +59,15 @@
            "))
 
 (def sentence-parser (insta/parser
-                      "SENTENCE       = <whitespace?> step_keyword (words | data)*
+                      "SENTENCE       = <whitespace?> step_keyword (words | data_group)*
                        given          = <'Given '>
                        when           = <'When '>
                        then           = <'Then '>
                        and            = <'And '>
                        words          = #'[a-zA-Z0-9\"./\\ ]+'
-                       data           = <\"'\"> #'[a-zA-Z0-9./\\ ]+' <\"'\">
+                       data_group     = <\"'\"> data <\"'\"> | map
+                       map            = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
+                       data           = #'[a-zA-Z0-9\\-:,./\\\" ]+'
                        <step_keyword> = given | when | then | and
                        <whitespace>   = #'\\s+'
                       "))
@@ -162,7 +165,9 @@
       (first elements)
       nil)))
 
-(defn narrative-str [narrative-ast]
+(defn narrative-str
+  "transform a narrative tree to a string"
+  [narrative-ast]
   (apply str(map (fn [e]
                    (if (instance? java.lang.String e)
                      e
@@ -197,11 +202,16 @@
     [(get @regexes-to-fns (str (first matching-regexes))) (first matching-regexes)]))
 
 (defn params-from-steps
-  "return a vector of groups the regex found in the step sentence, nil otherwise"
+  "return a vector of data as string as found in groups the regex found in the step sentence,
+  if the data is a clojure data structure then it will be evaluated toherwise returned as a string,
+  nil if no groups are found"
   [regex step-sentence]
   (let [find-result (re-find regex step-sentence)]
     (if (coll? find-result)
-      (rest find-result)
+      (map (fn [data] (let [data-evaluated (clojure.edn/read-string data)]
+                       (println " data evaluated " data-evaluated)
+                       (if (coll? data-evaluated) (do (println "this is a map : " data-evaluated) data-evaluated) data)))
+           (rest find-result))
       nil)))
 
 (defn- extract-data-as-args [sentence-elements]
@@ -209,7 +219,9 @@
         data-args (clojure.string/join " " (for [i (range data-count)] (str "arg" i)))]
     (str "[" data-args "]")))
 
-(defnp generate-step-fn [step-sentence]
+(defn generate-step-fn
+  "generate a spexec macro call corresponding to the sentence step"
+  [step-sentence]
   (let [sentence-elements (rest (sentence-parser step-sentence))
         step-type (ffirst sentence-elements)]
     (str (case step-type
@@ -232,7 +244,7 @@
            "  (do \"something\"))"))))
 
 (defn print-fn-skeleton [step-sentence]
-  (println (timbre/color-str :yellow "No function found for step you may add: \n   " (generate-step-fn step-sentence))))
+  (println (timbre/color-str :yellow "No function found for step: " step-sentence "\nyou may add: \n   " (generate-step-fn step-sentence))))
 
 (defn- exec-scenario [scenario-ast]
   ;;for each step sentence, find the fn which have a regex that match

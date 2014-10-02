@@ -34,7 +34,7 @@ You can add a "narrrative" for all your scenarios with the story syntax at the b
 ```Cucumber
 Scenario: create a new product
 # this is a comment
-When I create a new product with name "iphone 6" and description "awesome phone"
+When I create a new product with name 'iphone 6' and description 'awesome phone'
 Then I receive a response with an id 56422 and a location URL
 # this a second comment
 # on two lines
@@ -52,7 +52,7 @@ Then write the code that will gets executed for each scenario steps:
 
 ```clojure
 
-(defwhen #"I create a new product with name \"(.*)\" and description \"(.*)\"" 
+(defwhen #"I create a new product with name '(.*)' and description '(.*)'"
 [_ name desc]
   (println "executing my product creation function with params " name desc)
   (let [id (UUID/next.)]
@@ -67,9 +67,30 @@ Then write the code that will gets executed for each scenario steps:
   [_ id]
   (println (str "executing the assertion that the product has been created with the id " id))
   id)
-
-
 ```
+
+**Tips**: you can get a function snippet generated for you when executing the spec without step function. Think about enclosing with quote 'your data' in step sentence to get them detected by the parser and it'll generate a step function skeleton in the output with the correct regex group.
+Example: 
+
+Executing the specification with the step sentence without any matching function:
+
+```cucumber
+When I create a new product with name '(.*)' and description '(.*)'
+```
+
+will generate in the stdout the following step function skeleton:
+
+```clojure
+No function found for step you may add: 
+(defwhen #"I create a new product with name '(.*)' and description '(.*)'"  [arg0 arg1]  (do "something"))
+```
+
+### how to get data from the scenario into your step function
+
+Every group the regex will find (everything enclosed in parens () in your regex) will be transmitted as a string to your step function params with the same left-to-right order, BUT the data is first evaluated as clojure.edn data string (see [clojure.edn/read-string](https://clojure.github.io/clojure/clojure.edn-api.html)) and IF it is a Clojure data structure ((coll? evaluated-data) returns true), THEN it will be transmitted evaluated as a param to the step function.
+
+**Tips**: the map will be detected by the parser and it'll generate a step function skeleton in the output with the correct regex group.
+
 
 ### Execute Specification
 

@@ -12,6 +12,9 @@ Then I receive a response with an id and a location URL
 When I invoke a GET request on location URL
 Then I receive a 200 response
 
+Scenario: create a new product with a data map
+When I create a new product with '{:description "awesome phone", :name "iphone 6"}'
+
 Scenario: get product info
 #test
 When I invoke a GET request on location URL

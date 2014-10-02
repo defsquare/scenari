@@ -1,7 +1,8 @@
 (ns spexec.core-test
   (:require [taoensso.timbre :as timbre]
             [clojure.test :as test]
-            [spexec.core :refer :all])
+            [spexec.core :refer :all]
+            [spexec.utils :as utils])
   (:import [java.util.UUID]))
 
 (timbre/refer-timbre)
@@ -71,6 +72,12 @@ Then I receive a 200 response
                     [:step_sentence [:when] "I invoke a GET request on location URL"]
                     [:step_sentence [:then] "I receive a 200 response"]]]])
 
+
+
+
+(test/deftest get-in-ast
+  (test/is (= "product manager" (utils/get-in example-ast [:SPEC :narrative :as_a]))))
+
 (test/deftest test-parser []
   (gherkin-parser example-scenario-multiple)
   (gherkin-parser example-scenario-unique))
@@ -83,6 +90,10 @@ Then I receive a 200 response
      :desc desc
      :qty (rand-int 50)
      :location-url (str "http://example.com/product/" id)}))
+
+(defwhen #"I create a new product with '(.*)'$"
+  [_ product-map]
+  (test/is (map? product-map)))
 
 (defthen #"I receive a response with an id and a location URL"
   [{:keys [id name desc qty location-url], :as previous-return} ]
