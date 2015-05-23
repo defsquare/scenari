@@ -72,9 +72,6 @@ Then I receive a 200 response
                     [:step_sentence [:when] "I invoke a GET request on location URL"]
                     [:step_sentence [:then] "I receive a 200 response"]]]])
 
-
-
-
 (test/deftest get-in-ast
   (test/is (= "product manager" (utils/get-in example-ast [:SPEC :narrative :as_a]))))
 
@@ -115,3 +112,13 @@ Then I receive a 200 response
     [regex fn]))
 
 (exec-spec "resources/spexec.feature")
+
+
+(def examples "
+Examples:
+  | col1  | col2  | col 3 |
+  | val11 | val12 | val13 |
+  | val21 | val22 | val23 |
+  | val31 | val32 | val33 |
+
+")

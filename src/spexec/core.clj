@@ -22,12 +22,15 @@
 ;
 
 (ns spexec.core
-   (:require [instaparse.core :as insta]
-            [taoensso.timbre :as timbre]
-            [clojure.string :as string]
-            [clojure.zip :as zip]
-            [clojure.edn :only read-string]
-            [clojure.pprint :refer :all]))
+   (:require [instaparse.core :as   insta]
+             [taoensso.timbre :as   timbre]
+             [clojure.string  :as   string]
+             [clojure.zip     :as   zip]
+             [clojure.edn     :only read-string]
+             [clojure.pprint  :refer :all]
+             [clojure.java.io :only [file as-file] :as io])
+   (:import org.apache.commons.io.FileUtils
+            org.apache.commons.io.filefilter.RegexFileFilter))
 (timbre/refer-timbre)
 
 (def gherkin-parser (insta/parser
@@ -57,6 +60,27 @@
            word               = #'[a-zA-Z]+'
            number             = #'[0-9]+'
            "))
+
+(def rules-parser (insta/parser
+                   "<RULES>      = rule <eol>*
+                    rule         = <'Rule:'> rule_name <eol> when_clause <eol?> then_clause
+                    rule_name    = #'[a-zA-Z0-9]+'
+                    when_clause  = 'When' condition
+                    condition    = (#'[a-zA-Z0-9 .]*' | data_holder)*
+                    data_holder  = '<' #'[a-zA-Z_]' '>'
+                    then_clause  = 'Then' action
+                    action       = (#'[a-zA-Z0-9 .]*' | data_holder)*
+                    whitespace   = #'\\s+'
+                    eol          = '\r' | '\n'"))
+
+(def examples-parser (insta/parser
+                      "<EXAMPLES>    = <whitespace?> <'Examples:'> <eol> header row* <eol?>
+                       header        = <whitespace?> (<'|'> column_name)+ <'|'> <eol>
+                       <column_name> = <whitespace?> #'[a-zA-Z0-9 ]+' <whitespace?>
+                       row           = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
+                       <value>       = #'[a-zA-Z0-9 ]*'
+                       whitespace    = #'\\s+'
+                       eol           = '\r' | '\n'"))
 
 (def sentence-parser (insta/parser
                       "SENTENCE       = <whitespace?> step_keyword (words | data_group)*
@@ -209,8 +233,7 @@
   (let [find-result (re-find regex step-sentence)]
     (if (coll? find-result)
       (map (fn [data] (let [data-evaluated (clojure.edn/read-string data)]
-                       (println " data evaluated " data-evaluated)
-                       (if (coll? data-evaluated) (do (println "this is a map : " data-evaluated) data-evaluated) data)))
+                       (if (coll? data-evaluated) data-evaluated data)))
            (rest find-result))
       nil)))
 
@@ -244,7 +267,7 @@
            "  (do \"something\"))"))))
 
 (defn print-fn-skeleton [step-sentence]
-  (println (timbre/color-str :yellow "No function found for step: " step-sentence "\nyou may add: \n   " (generate-step-fn step-sentence))))
+  (println (timbre/color-str :yellow "No function found for step: " step-sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence))))
 
 (defn- exec-scenario [scenario-ast]
   ;;for each step sentence, find the fn which have a regex that match
@@ -286,19 +309,46 @@
   ;; if it's string, it first check if it's the name of the file
   ;; otherwise considers it's the spec itself
   (fn [spec]
-    (if (and (= (type spec) java.lang.String)
-                     (.exists (java.io.File. spec)))
-              java.io.File
-              (type spec)))
-  :default java.io.File)
+    (letfn [(handle-file-or-dir [file-or-dir]
+              (if (.isFile file-or-dir)
+                :file
+                (if (.isDirectory file-or-dir)
+                  :dir)))]
+      (if (= (type spec) java.lang.String)
+        (if (.exists (java.io.File. spec))
+          (handle-file-or-dir (java.io.File. spec))
+          :spec-as-str)
+        (if (= (type spec) java.io.File)
+          (handle-file-or-dir spec)
+          (throw (RuntimeException. (str "type " (type spec) "for spec not accepted (only string or file)")))))))
+  :default :file)
+
+(defn- get-spec-files [basedir]
+  (letfn [(find-spec-files [basedir]
+            (FileUtils/listFiles
+             basedir
+             (RegexFileFilter. "([^.#$](\\S)*.story|[^.#$](\\S)*.feature)")
+             nil))]
+    (case (str (type basedir))
+      "class java.lang.String" (if (.exists (java.io.File. basedir))
+                         (find-spec-files (java.io.File. basedir ))
+                         (throw (RuntimeException. (str basedir " doesn't exists in path: " (java.lang.System/getProperty "user.dir")))))
+      "class java.io.File" (find-spec-files basedir))))
+
 
 (defmethod exec-spec
-  java.io.File
+  :dir
+  [spec-dir]
+  (doseq [spec-file (get-spec-files spec-dir)]
+    (exec-spec spec-file)))
+
+(defmethod exec-spec
+  :file
   [spec-file]
   (exec-spec (slurp spec-file)))
 
 (defmethod exec-spec
-  java.lang.String
+  :spec-as-str
   [spec-str]
   ;;for each scenarios
   (do (doseq [before-fn @before] (before-fn))
@@ -316,3 +366,10 @@
               (do (print "\n")
                   spec-acc)))))
       (doseq [after-fn @after] (after-fn))))
+
+(defn exec-specs
+  [dirs-or-specs]
+  (if (coll? dirs-or-specs)
+    (doseq [dir-or-spec dirs-or-specs]
+      (exec-spec dir-or-spec))
+    (exec-spec dirs-or-specs)))
