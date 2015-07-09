@@ -62,14 +62,16 @@
            "))
 
 (def rules-parser (insta/parser
-                   "<RULES>      = rule <eol>*
-                    rule         = <'Rule:'> rule_name <eol> when_clause <eol?> then_clause
-                    rule_name    = #'[a-zA-Z0-9]+'
-                    when_clause  = 'When' condition
-                    condition    = (#'[a-zA-Z0-9 .]*' | data_holder)*
-                    data_holder  = '<' #'[a-zA-Z_]' '>'
-                    then_clause  = 'Then' action
-                    action       = (#'[a-zA-Z0-9 .]*' | data_holder)*
+                   "<RULES>      = rule* <eol>*
+                    rule         = <'Rule '> rule_name rule_params when_clause then_clause <eol?>
+                    rule_name    = #'[a-zA-Z0-9]+' <whitespace> <eol?>
+                    rule_params  = <'['> rule_param* <']'> <whitespace> <eol?>
+                    rule_param   = #'[a-zA-Z0-9]+' <whitespace>
+                    when_clause  = <('when'|'When')> <whitespace> condition <whitespace> <eol?>
+                    condition    = <'['> (#'[a-zA-Z0-9 .]*' | data_holder)* <']'>
+                    data_holder  = <'<'> #'[a-zA-Z0-9_]+' <'>'>
+                    then_clause  = <('then'|'Then')> <whitespace> action <whitespace> <eol?>
+                    action       = <'['> (#'[a-zA-Z0-9 .]*' | data_holder)* <']'>
                     whitespace   = #'\\s+'
                     eol          = '\r' | '\n'"))
 
@@ -111,6 +113,7 @@
 
 (defn spexec-pprint-dispatch [str]
   (if (reduce (fn [prev curr] (or prev (.startsWith str curr)))
+              ()
               false
               (vals keywords-str))
     (print "  " str)

@@ -73,7 +73,7 @@ Then I receive a 200 response
                     [:step_sentence [:then] "I receive a 200 response"]]]])
 
 (test/deftest get-in-ast
-  (test/is (= "product manager" (utils/get-in example-ast [:SPEC :narrative :as_a]))))
+  (test/is (= "product manager" (first (utils/get-in example-ast [:SPEC :narrative :as_a])))))
 
 (test/deftest test-parser []
   (gherkin-parser example-scenario-multiple)
@@ -120,5 +120,7 @@ Examples:
   | val11 | val12 | val13 |
   | val21 | val22 | val23 |
   | val31 | val32 | val33 |
-
 ")
+
+(def rules "Rule 1 [] \n when [val1 <val3(> val2] then [throw new exception]\n")
+
