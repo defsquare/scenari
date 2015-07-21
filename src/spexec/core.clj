@@ -22,26 +22,27 @@
 ;
 
 (ns spexec.core
-   (:require [instaparse.core :as   insta]
-             [taoensso.timbre :as   timbre]
-             [clojure.string  :as   string]
-             [clojure.zip     :as   zip]
-             [clojure.edn     :only read-string]
-             [clojure.pprint  :refer :all]
-             [clojure.java.io :only [file as-file] :as io])
+  (:require [instaparse.core :as insta]
+            [taoensso.timbre :as timbre]
+            [clojure.string :as string]
+            [clojure.zip :as zip]
+            [clojure.edn :only read-string]
+            [clojure.pprint :refer :all]
+            [clojure.java.io :only [file as-file] :as io]
+            [spexec.utils :as utils])
    (:import org.apache.commons.io.FileUtils
             org.apache.commons.io.filefilter.RegexFileFilter))
 (timbre/refer-timbre)
 
 (def gherkin-parser (insta/parser
-          "SPEC               = <whitespace?> narrative? <whitespace?> (scenario <eol> <eol?>)*
-           narrative          = <'Narrative:'> <eol>? (as_a I_want_to in_order_to | as_a I_want_to so_that )?
-           in_order_to        = <'In order to '> #'.*' <eol>
-           as_a               = <'As a '> #'.*' <eol>
-           I_want_to          = <'I want to '> #'.*' <eol>
-           so_that            = <'So that '> #'.*' <eol>
-           NarrativeStartingWord = ('In order to' | 'As a' | 'I want to' | 'So that')
-           scenario           = <scenario_keyword> scenario_sentence <eol> steps
+          "SPEC               = <whitespace?> narrative? <whitespace?> (scenario <eol?> <eol?>)* | comment
+           narrative          = <'Narrative:'|'Feature:'> <sentence>? <eol>? (as_a I_want_to in_order_to |
+                                                                              as_a I_want_to so_that )?
+           in_order_to        = <whitespace>? <'In order to '> #'.*' <eol>
+           as_a               = <whitespace>? <'As a '> #'.*' <eol>
+           I_want_to          = <whitespace>? <'I want to '> #'.*' <eol>
+           so_that            = <whitespace>? <'So that '> #'.*' <eol>
+           scenario           = <scenario_keyword> scenario_sentence <eol> steps examples?
            <scenario_keyword> = 'Scenario: '
            <comment>          = (comment_line whitespace?)*
            <comment_line>     = <whitespace*> <'#'> <sentence>
@@ -56,7 +57,12 @@
            <eol>              = '\r' | '\n'
            scenario_sentence  = #'.*'
            step_sentence      = step_keyword #'.*'
-           sentence           = #'[a-zA-Z0-9\" ]+'
+           sentence           = #'[a-zA-Z0-9\"./\\_\\-\\':<>é ]+'
+           examples           = <whitespace?> <'Examples:'> <eol> header row* <eol?>
+           header             = <whitespace?> (<'|'> column_name)+ <'|'> <eol>
+           <column_name>      = <whitespace?> #'[a-zA-Z0-9_\\- ]+' <whitespace?>
+           row                = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
+           <value>            = #'[a-zA-Z0-9+ ]*'
            word               = #'[a-zA-Z]+'
            number             = #'[0-9]+'
            "))
@@ -78,24 +84,27 @@
 (def examples-parser (insta/parser
                       "<EXAMPLES>    = <whitespace?> <'Examples:'> <eol> header row* <eol?>
                        header        = <whitespace?> (<'|'> column_name)+ <'|'> <eol>
-                       <column_name> = <whitespace?> #'[a-zA-Z0-9 ]+' <whitespace?>
+                       <column_name> = <whitespace?> #'[a-zA-Z0-9_\\- ]+' <whitespace?>
                        row           = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
-                       <value>       = #'[a-zA-Z0-9 ]*'
+                       <value>       = #'[a-zA-Z0-9+ ]*'
                        whitespace    = #'\\s+'
                        eol           = '\r' | '\n'"))
 
 (def sentence-parser (insta/parser
-                      "SENTENCE       = <whitespace?> step_keyword (words | data_group)*
-                       given          = <'Given '>
-                       when           = <'When '>
-                       then           = <'Then '>
-                       and            = <'And '>
-                       words          = #'[a-zA-Z0-9\"./\\ ]+'
-                       data_group     = <\"'\"> data <\"'\"> | map
-                       map            = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
-                       data           = #'[a-zA-Z0-9\\-:,./\\\" ]+'
-                       <step_keyword> = given | when | then | and
-                       <whitespace>   = #'\\s+'
+                      "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
+                       given            = <'Given '>
+                       when             = <'When '>
+                       then             = <'Then '>
+                       and              = <'And '>
+                       words            = #'[a-zA-Z0-9\"./\\_\\- ]+'
+                       <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
+                       parameter        = <'<'> parameter_name <'>'>
+                       data_group       = <\"'\"> data <\"'\"> | map
+                       map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
+                       data             = #'[a-zA-Z0-9\\-:,./\\\" ]+'
+                       <step_keyword>   = given | when | then | and
+                       <whitespace>     = #'\\s+'
+                       eol              = '\r' | '\n'
                       "))
 
 (def keywords-str {:given "Given "
@@ -103,17 +112,8 @@
                    :then "Then "
                    :and "And "})
 
-;;TODO make the steps macro that generate the fn implement the protocol
-(defprotocol STEP
-  (step [this regex]))
-
-(defn rand-from-to [from to] (+ from (rand-int to)))
-
-(def regexes-to-fns (atom {}));;store the regex as a string, as keys can't be regex in a map and also because same regex expression are different object in Java...:(
-
 (defn spexec-pprint-dispatch [str]
   (if (reduce (fn [prev curr] (or prev (.startsWith str curr)))
-              ()
               false
               (vals keywords-str))
     (print "  " str)
@@ -121,13 +121,39 @@
       (print "    " str)
       (print str))))
 
-(defn generate-fn-symbol
-  "generate a function name from the regex and a random number - NOT USED ANYMORE"
-  [prefix regex]
-  (symbol (str "when-"
-               (apply str (interpose "-" (take 2 (string/split (str regex) #" "))));;first two words of the regex
-               "-"
-               (rand-from-to 1 100000))))
+(defn- extract-data-as-args [sentence-elements]
+  (let [data-count (count (filter (fn [c] (= (first c) :data)) sentence-elements))
+        data-args (clojure.string/join " " (for [i (range data-count)] (str "arg" i)))]
+    (str "[" data-args "]")))
+
+(defn generate-step-fn
+  "generate a spexec macro call corresponding to the sentence step"
+  [step-sentence]
+  (let [sentence-elements (rest (sentence-parser step-sentence))
+        step-type (ffirst sentence-elements)]
+    (str (case step-type
+           :given "(defgiven #\""
+           :when  "(defwhen #\""
+           :then  "(defthen #\""
+           "(defwhen #\"")
+         (apply str (map (fn [c]
+                           (let [what? (first c)]
+                             (case what?
+                               :words (second c)
+                               :data "'(.*)'"
+                               "test"))) (rest sentence-elements)))
+         "\"  "
+         (extract-data-as-args sentence-elements)
+         (case step-type
+           :given "  (do \"setup or assert correct tested component state\"))"
+           :when  "  (do \"something\"))"
+           :then  "  (do \"assert the result of when step\"))"
+           "  (do \"something\"))"))))
+
+(defn print-fn-skeleton [step-sentence]
+  (println (timbre/color-str :yellow "No function found for step: " step-sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence))))
+
+(def regexes-to-fns (atom {}));;store the regex as a string, as keys can't be regex in a map and also because same regex expression are different object in Java...:(
 
 (defn store-fns-and-regexes! [regex fn]
    (swap! regexes-to-fns assoc (str regex) fn)
@@ -176,7 +202,6 @@
   `(let [step-fn# (fn [~@params] ~@body)]
      (step-then ~regex step-fn#)))
 
-;;TODO should use enlive instead of zipper for AST selection ?
 (defn- elements-ast [spec-ast]
   (-> (zip/vector-zip spec-ast) zip/down zip/rights))
 
@@ -206,7 +231,7 @@
                        :so_that " so that "))) (flatten narrative-ast))))
 
 (defn scenario-sentence [scenario-ast]
-  (-> (zip/vector-zip scenario-ast) zip/down zip/right zip/down zip/right zip/node))
+  (first (spexec.utils/get-in-tree scenario-ast [:scenario :scenario_sentence])))
 
 (defn steps-sentence-ast [scenario-ast]
   (-> (zip/vector-zip scenario-ast) zip/down zip/right zip/right zip/node))
@@ -215,6 +240,16 @@
   (let [v-steps-sentences (-> (zip/vector-zip steps-ast) zip/down zip/rights)]
     (map (fn [[_ [keyword] sentence]]
            (str (keyword keywords-str) sentence)) v-steps-sentences)))
+
+(defn examples-ast [scenario-ast]
+  (first (utils/get-whole-in scenario-ast [:scenario :examples])))
+
+(defn examples
+  "return a vector of map with header name as key and row value"
+  [examples-ast]
+  (let [headers (map string/trim (utils/get-in-tree examples-ast [:examples :header]))
+        rows (map (fn [row] (map string/trim (rest row))) (utils/get-whole-in examples-ast [:examples :row]))]
+    (map (partial zipmap headers) rows)))
 
 (defn matching-fn
   "return the tuple of fn/regex as a vector that match the step-sentence"
@@ -226,11 +261,14 @@
                 (map re-pattern (keys @regexes-to-fns)))]
     (if (> (count matching-regexes) 1)
       (throw (RuntimeException. (str (count matching-regexes) " matching functions were found for the following step sentence:\n " step-sentence ", please refine your regexes that match: \n" (apply str matching-regexes)))))
+    (if (= (count matching-regexes) 0)
+      (do (print-fn-skeleton step-sentence)
+          nil))
     [(get @regexes-to-fns (str (first matching-regexes))) (first matching-regexes)]))
 
 (defn params-from-steps
   "return a vector of data as string as found in groups the regex found in the step sentence,
-  if the data is a clojure data structure then it will be evaluated toherwise returned as a string,
+  if the data is a clojure data structure then it will be evaluated otherwise returned as a string,
   nil if no groups are found"
   [regex step-sentence]
   (let [find-result (re-find regex step-sentence)]
@@ -240,70 +278,74 @@
            (rest find-result))
       nil)))
 
-(defn- extract-data-as-args [sentence-elements]
-  (let [data-count (count (filter (fn [c] (= (first c) :data)) sentence-elements))
-        data-args (clojure.string/join " " (for [i (range data-count)] (str "arg" i)))]
-    (str "[" data-args "]")))
+(defn- scenario-with-examples? [scenario-ast]
+  (not (nil? (utils/get-in-tree scenario-ast [:SPEC :scenario :examples]))))
 
-(defn generate-step-fn
-  "generate a spexec macro call corresponding to the sentence step"
-  [step-sentence]
-  (let [sentence-elements (rest (sentence-parser step-sentence))
-        step-type (ffirst sentence-elements)]
-    (str (case step-type
-           :given "(defgiven #\""
-           :when  "(defwhen #\""
-           :then  "(defthen #\""
-           "(defwhen #\"")
-        (apply str (map (fn [c]
-                          (let [what? (first c)]
-                             (case what?
-                              :words (second c)
-                              :data "'(.*)'"
-                              "test"))) (rest sentence-elements)))
-         "\"  "
-         (extract-data-as-args sentence-elements)
-         (case step-type
-           :given "  (do \"setup or assert correct tested component state\"))"
-           :when  "  (do \"something\"))"
-           :then  "  (do \"assert the result of when step\"))"
-           "  (do \"something\"))"))))
+(defn params-from-example
+  "return a vector of data as string as found in example row"
+  [example]
+  (vals example))
 
-(defn print-fn-skeleton [step-sentence]
-  (println (timbre/color-str :yellow "No function found for step: " step-sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence))))
+(defn- execute-fn-for-step [step-sentence fn prev-return params]
+  ;;(trace "regex and fn " regex fn)
+  (if (not (nil? fn))
+    ;; fn found with a regex that match the sentence
+    ;; now execute the fn with the param value extracted from the step sentence
+    ;; and keep the return value to input it for the next step
+    ;; so if you want to accumulate the results, just provide a coll and conj on it
+    (let [result
+          (try
+            (apply fn prev-return params)
+            (catch java.lang.Exception e {:failure true :message (.getMessage e)}))
+          ]
+      (with-pprint-dispatch spexec-pprint-dispatch (pprint step-sentence))
+      (with-pprint-dispatch spexec-pprint-dispatch (pprint (str "=> " result)))
+      (trace "executed fn " fn " with " prev-return " and " params ", result => " result)
+      result)
+    (do (print-fn-skeleton step-sentence)
+        nil)))
 
-(defn- exec-scenario [scenario-ast]
-  ;;for each step sentence, find the fn which have a regex that match
-  ;;execute that fn and input the return as first param of the next fn
+(defn exec-scenario-with-examples
+  "run the scenario for each example rows, then
+   for each step sentence find the fn which have a regex that match
+   get the parameters value from the example and replace the parameter in the sentence
+   then execute that fn with the parameters and input the return as first param of the next fn"
+  [scenario-ast]
+  (let [step-sentences (step-sentences (steps-sentence-ast scenario-ast))
+        examples (examples (examples-ast scenario-ast))]
+    (println  "Run Scenario:" (scenario-sentence scenario-ast) " with " (count examples) " examples")
+    (loop [examples examples]
+      (if-let [example (first examples)]
+        (do (loop [step-sentences step-sentences
+                   prev-return nil
+                   scenario-acc [:scenario (scenario-sentence scenario-ast)]]
+              (if-let [step-sentence (first step-sentences)]
+                (let [[fn regex] (matching-fn step-sentence)
+                      params (params-from-example example)
+                      result (execute-fn-for-step step-sentence fn prev-return params)]
+                  (recur (rest step-sentences)
+                         result
+                         (conj scenario-acc [step-sentence result])))))
+            (recur (rest examples)))))))
+
+(defn exec-scenario
+  "for each step sentence, find the fn which have a regex that match
+   execute that fn and input the return as first param of the next fn"
+  [scenario-ast]
   (println  "Run Scenario:" (scenario-sentence scenario-ast))
   (loop [step-sentences (step-sentences (steps-sentence-ast scenario-ast))
-         prev-ret       nil
+         prev-return nil
          scenario-acc [:scenario (scenario-sentence scenario-ast)]]
     (if-let [step-sentence (first step-sentences)]
       (let [[fn regex] (matching-fn step-sentence)]
-        (trace "regex and fn " regex fn)
-        (if (nil? fn)
-          ;; now execute the fn with the param value extracted from the step sentence
-          ;; and keep the return value to input it for the next step
-          ;; so if you want to accumulate the results, just provide a coll and conj on it
-          (do (print-fn-skeleton step-sentence)
-              (recur (rest step-sentences)
-                     nil
-                     (conj scenario-acc [step-sentence nil])))
-          ;;fn found with a regex that match the sentence
-          (let [result
-                (try
-                  (apply fn prev-ret (params-from-steps regex step-sentence))
-                  (catch java.lang.Exception e {:failure true :message (.getMessage e)}))
-                ]
-            (with-pprint-dispatch spexec-pprint-dispatch (pprint step-sentence))
-            (with-pprint-dispatch spexec-pprint-dispatch (pprint (str "=> " result)))
-            (trace "executed fn " fn " with " prev-ret " and "  (params-from-steps regex step-sentence) ", result => " result)
+        (if (and (not (nil? fn)) (not (nil? regex)))
+          (let [params (params-from-steps regex step-sentence)
+                result (execute-fn-for-step step-sentence fn prev-return params)]
             (recur (rest step-sentences)
                    result
-                   (conj scenario-acc [step-sentence result])))))
-      scenario-acc))
-  )
+                   (conj scenario-acc [step-sentence result])))
+          scenario-acc))
+      scenario-acc)))
 
 ;;TODO include deftest with the macro define in the above and with test-ns-hook for running the test in the correct order
 (defmulti exec-spec
@@ -357,18 +399,24 @@
   (do (doseq [before-fn @before] (before-fn))
       (let [spec-parse-tree (gherkin-parser spec-str)]
         (if (insta/failure? spec-parse-tree)
-          (do (println "The supplied spec contains a parse error, please fix it, if you tried to supply a filename it was not found, please verify the relative path (btw that test get executed in the following dir:" (java.lang.System/getProperty "user.dir") ")")
+          (do (println "The supplied spec contains a parse error, please fix it,
+                        if you tried to supply a filename it was not found,
+                        please verify the relative path (btw that test get executed in the following dir:"
+                       (java.lang.System/getProperty "user.dir") ")")
               (insta/get-failure spec-parse-tree))
           (loop [scenarios (scenarios-ast spec-parse-tree)
                  spec-acc [(do (let [narrative (narrative-str (narrative-ast spec-parse-tree))]
                                  (println narrative)
                                  narrative))]]
             (if-let [scenario-ast (first scenarios)]
-              (let [exec-result (exec-scenario scenario-ast)]
-                (recur (rest scenarios) (conj spec-acc exec-result)))
+              (if (scenario-with-examples? scenario-ast)
+                (let [exec-result (exec-scenario-with-examples scenario-ast)]
+                  (recur (rest scenarios) (conj spec-acc exec-result)))
+                (let [exec-result (exec-scenario scenario-ast)]
+                  (recur (rest scenarios) (conj spec-acc exec-result))))
               (do (print "\n")
-                  spec-acc)))))
-      (doseq [after-fn @after] (after-fn))))
+                  (doseq [after-fn @after] (after-fn))
+                  spec-acc)))))))
 
 (defn exec-specs
   [dirs-or-specs]

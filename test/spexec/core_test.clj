@@ -73,7 +73,7 @@ Then I receive a 200 response
                     [:step_sentence [:then] "I receive a 200 response"]]]])
 
 (test/deftest get-in-ast
-  (test/is (= "product manager" (first (utils/get-in example-ast [:SPEC :narrative :as_a])))))
+  (test/is (= "product manager" (first (utils/get-in-tree example-ast [:SPEC :narrative :as_a])))))
 
 (test/deftest test-parser []
   (gherkin-parser example-scenario-multiple)
@@ -87,6 +87,15 @@ Then I receive a 200 response
      :desc desc
      :qty (rand-int 50)
      :location-url (str "http://example.com/product/" id)}))
+
+(defwhen #"I create a new product with name <product_name> and description <product_desc>"
+         [_ name desc]
+         (let [id (rand-int 100000)]
+           {:id id
+            :name name
+            :desc desc
+            :qty (rand-int 50)
+            :location-url (str "http://example.com/product/" id)}))
 
 (defwhen #"I create a new product with '(.*)'$"
   [_ product-map]
@@ -113,13 +122,29 @@ Then I receive a 200 response
 
 (exec-spec "resources/spexec.feature")
 
-
-(def examples "
+(def scenario-with-examples "
+Scenario: create a new product
+# this is a comment
+When I create a new product with name <product_name> and description <product_desc>
+Then I receive a response with an id
+And a location URL
 Examples:
-  | col1  | col2  | col 3 |
-  | val11 | val12 | val13 |
-  | val21 | val22 | val23 |
-  | val31 | val32 | val33 |
+  | product_name  | product_desc     |
+  | iPhone 6      | telephone        |
+  | iPhone 6+     | bigger telephone |
+  | iPad          | tablet           |
+")
+
+(def examples-alone "
+Examples:
+  | product_name  | product_desc     |
+  | iPhone 6      | telephone        |
+  | iPhone 6+     | bigger telephone |
+  | iPad          | tablet           |
+")
+
+(def sentence-with-parameter "
+When I create a new product with name <product_name> and description <product_desc>
 ")
 
 (def rules "Rule 1 [] \n when [val1 <val3(> val2] then [throw new exception]\n")

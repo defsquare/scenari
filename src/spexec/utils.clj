@@ -21,18 +21,35 @@
     :read readr
     :eval (partial contextual-eval (local-context))))
 
-(defn test []
-  (println "begin")
-  (let [x 5 y 10]
-    (break-with-repl)
-    (do (map inc [1 2 3 4])))
-  (println "end"))
-
-
-(defn get-in
+(defn get-whole-in
   ""
   ([tree ks]
-     (get-in tree ks nil))
+   (get-whole-in tree ks nil))
+  ([tree ks default]
+   (if (or (empty? ks) (nil? ks))
+     (if (empty? tree)
+       default
+       tree)
+     (if (keyword? (first tree))
+       ;;mono node root tree
+       (if (= (first tree) (first ks))
+         (if (empty? (rest ks))
+           tree
+           (recur (rest tree) (rest ks) default))
+         default)
+       ;;multi nodes root tree
+       (recur (mapcat vector
+                      (filter (fn [node]
+                                (if (keyword? (first node))
+                                  (= (first node) (first ks))
+                                  false)) tree))
+              (rest ks)
+              default)))))
+
+(defn get-in-tree
+  ""
+  ([tree ks]
+     (get-in-tree tree ks nil))
   ([tree ks default]
      (if (or (empty? ks) (nil? ks))
        (if (empty? tree)
@@ -40,7 +57,9 @@
          tree)
        (if (keyword? (first tree))
          ;;mono node root tree
-         (if (= (first tree) (first ks)) (recur (rest tree) (rest ks) default) default)
+         (if (= (first tree) (first ks))
+           (recur (rest tree) (rest ks) default)
+           default)
          ;;multi nodes root tree
          (recur (mapcat (fn [node]
                           ;;remove first element and add to the
