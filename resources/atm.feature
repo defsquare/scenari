@@ -16,7 +16,7 @@ When the card holder withdraw 200 € at the ATM rue de l'université
 Then he gets the message "insufficient balance"
 Then the account balance is 50 €
 
-# Rule: insufficient_balance
+#Rule: insufficient_balance
 # When <account.balance < withdrawal.amount>
 # Then <throw error "Insufficient balance">
 

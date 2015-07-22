@@ -21,7 +21,7 @@
 
 (defthen
   #"he gets (.*) € in cash"
-  [amount]
+  [prev-result amount]
   (do true))
 
 (defthen
