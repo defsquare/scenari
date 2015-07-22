@@ -17,7 +17,7 @@ Spexec is an Executable Specification [Clojure](http://clojure.org/) library aim
 
 ```clojure
 ;;add this dependency to your project.clj file
-[spexec "1.1.0"]
+[spexec "1.2.0"]
 ;;then in your ns statement
 (:require [spexec.core :refer :all])
 
@@ -199,7 +199,7 @@ Logging is done using the great [Timbre](https://github.com/ptaoussanis/timbre) 
 
 Spexec is released under the terms of the [MIT License](http://opensource.org/licenses/MIT).
 
-Copyright © 2014 Jérémie Grodziski jeremie@grodziski.com
+Copyright © 2015 Jérémie Grodziski jeremie@grodziski.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
