@@ -159,15 +159,15 @@
    (swap! regexes-to-fns assoc (str regex) fn)
    [regex fn])
 
-(defn step-given [regex fn]
+(defn Given [regex fn]
   "create and associate a regex to a function that will match the steps string in scenarios"
   (store-fns-and-regexes! regex fn))
 
-(defn step-when [regex fn]
+(defn When [regex fn]
   "create and associate a regex to a function that will match the steps string in scenarios"
   (store-fns-and-regexes! regex fn))
 
-(defn step-then [regex fn]
+(defn Then [regex fn]
   "create and associate a regex to a function that will match the steps string in scenarios"
   (store-fns-and-regexes! regex fn))
 
@@ -188,19 +188,19 @@
   "create and associate a regex to function params and body that will match the steps string in scenarios"
   [regex params & body]
   `(let [step-fn# (fn [~@params] ~@body)]
-     (step-given ~regex step-fn#)))
+     (Given ~regex step-fn#)))
 
 (defmacro defwhen
   "create and associate a regex to function params and body that will match the steps string in scenarios"
   [regex params & body]
   `(let [step-fn# (fn [~@params] ~@body)]
-     (step-when ~regex step-fn#)))
+     (When ~regex step-fn#)))
 
 (defmacro defthen
   "create and associate a regex to function params and body that will match the steps string in scenarios"
   [regex params & body]
   `(let [step-fn# (fn [~@params] ~@body)]
-     (step-then ~regex step-fn#)))
+     (Then ~regex step-fn#)))
 
 (defn- elements-ast [spec-ast]
   (-> (zip/vector-zip spec-ast) zip/down zip/rights))

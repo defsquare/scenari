@@ -139,15 +139,15 @@ There are 3 macros available for given/when/then:
 (defthen regex params body)
 ```
 
-Macros are here for convenience, plain-old function are also available (just think to correctly prefix the require to avoid collision with the [clojure.core/when](http://grimoire.arrdem.com/1.6.0/clojure.core/when)), you have to provide the step execution function as parameters with the function having groups count + 1 parameters (one for the previous step return and one params for each groups in the regex).
+Macros are here for convenience, plain-old function are also available, you have to provide the step execution function as parameters with the function having groups count + 1 parameters (one for the previous step return and one params for each groups in the regex).
 
 ```clojure
 (ns mystuff
   (:require [spexec :as spec]))
 ...
-(spec/given regex fn)
-(spec/when regex fn)
-(spec/then regex fn)
+(Given regex fn)
+(When regex fn)
+(Then regex fn)
 ```
 
 ### Chaining steps
