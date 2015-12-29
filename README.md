@@ -1,4 +1,4 @@
-# Spexec - Executable Specification in Clojure
+# Spexec - Executable Specification / BDD in Clojure
 ![Spexec logo](https://raw.githubusercontent.com/zenmodeler/spexec/master/spexec.png)
 
 Spexec is an Executable Specification [Clojure](http://clojure.org/) library aimed at writing and executing usage scenarios following the [Behavior-Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) - BDD - style. It has an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html), following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) (in short: Given/When/Then), and execute each scenario's _steps_ with associated Clojure code.
