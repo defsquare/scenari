@@ -34,38 +34,69 @@
             org.apache.commons.io.filefilter.RegexFileFilter))
 (timbre/refer-timbre)
 
+(def kw-translations-data {:fr {:given    "Etant donné que " :when "Quand " :and "Et "
+                                :then     "Alors " :scenario "Scénario :"
+                                :examples "Exemples :"
+                                :narrative "Narrative: "
+                                :as_a "En tant que "
+                                :in_order_to " afin de "
+                                :I_want_to " Je veux "
+                                :so_that " afin de "}
+                           :en {:given    "Given " :when "When " :and "And "
+                                :then     "Then " :scenario "Scenario:"
+                                :examples "Examples:"
+                                :narrative "Narrative: "
+                                :as_a "As a "
+                                :in_order_to " in order to "
+                                :I_want_to " I want to "
+                                :so_that " so that "}})
+
+(defn- kw-translations
+  "return a string consisting of appending the keyword separated by | for inclusion in gherkin grammar"
+  ([kw data]
+   (apply str
+          (interpose "|"
+                     (map (comp #(str "'" % "'")
+                                val
+                                first
+                                (partial filter (fn [e] (= (key e) kw))))
+                          (vals data)))))
+  ([kw]
+   (kw-translations kw kw-translations-data)))
+
 (def gherkin-parser (insta/parser
-          "SPEC               = <whitespace?> narrative? <whitespace?> (scenario <eol?> <eol?>)* | comment
+                      (str "SPEC = <whitespace?> narrative? <whitespace?> (scenario <eol?> <eol?>)* | comment
            narrative          = <'Narrative:'|'Feature:'> <sentence>? <eol>? (as_a I_want_to in_order_to |
                                                                               as_a I_want_to so_that )?
            in_order_to        = <whitespace>? <'In order to '> #'.*' <eol>
            as_a               = <whitespace>? <'As a '> #'.*' <eol>
            I_want_to          = <whitespace>? <'I want to '> #'.*' <eol>
            so_that            = <whitespace>? <'So that '> #'.*' <eol>
+           <scenario_keyword> = " (kw-translations :scenario) "
            scenario           = <scenario_keyword> scenario_sentence <eol> steps examples?
-           <scenario_keyword> = 'Scenario: '
            <comment>          = (comment_line whitespace?)*
            <comment_line>     = <whitespace*> <'#'> <sentence>
            steps              = (comment | <whitespace*> | step_sentence | <eol>)*
-           given              = <'Given '>
-           when               = <'When '>
-           then               = <'Then '>
-           and                = <'And '>
-           <step_keyword>     = given | when | then | and
+           given              = <" (kw-translations :given) ">
+           when               = <" (kw-translations :when) ">
+           then               = <" (kw-translations :then) ">
+           and                = <" (kw-translations :and) ">
+           <step_keywords>    = given | when | then | and
            <whitespace>       = #'\\s+'
            <space>            = ' '  | '\t'
            <eol>              = '\r' | '\n'
            scenario_sentence  = #'.*'
-           step_sentence      = step_keyword #'.*'
-           sentence           = #'[a-zA-Z0-9\"./\\_\\-\\':<>é ]+'
-           examples           = <whitespace?> <'Examples:'> <eol> header row* <eol?>
+           step_sentence      = step_keywords #'.*'
+           sentence           = #'[a-zA-Z0-9\"./\\_\\-\\':<>é@ ]+'
+           examples           = <whitespace?> examples-keywords <eol> header row* <eol?>
+           <examples-keywords>= <" (kw-translations :examples) ">
            header             = <whitespace?> (<'|'> column_name)+ <'|'> <eol>
            <column_name>      = <whitespace?> #'[a-zA-Z0-9_\\- ]+' <whitespace?>
            row                = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
-           <value>            = #'[a-zA-Z0-9+ ]*'
+           <value>            = #'[a-zA-Z0-9+@. ]*'
            word               = #'[a-zA-Z]+'
            number             = #'[0-9]+'
-           "))
+           ")))
 
 (def rules-parser (insta/parser
                    "<RULES>      = rule* <eol>*
@@ -91,21 +122,21 @@
                        eol           = '\r' | '\n'"))
 
 (def sentence-parser (insta/parser
-                      "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
-                       given            = <'Given '>
-                       when             = <'When '>
-                       then             = <'Then '>
-                       and              = <'And '>
-                       words            = #'[a-zA-Z0-9\"./\\_\\- ]+'
-                       <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
-                       parameter        = <'<'> parameter_name <'>'>
-                       data_group       = <\"'\"> data <\"'\"> | map
-                       map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
-                       data             = #'[a-zA-Z0-9\\-:,./\\\" ]+'
-                       <step_keyword>   = given | when | then | and
-                       <whitespace>     = #'\\s+'
-                       eol              = '\r' | '\n'
-                      "))
+                       (str "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
+                             given            = <" (kw-translations :given) ">
+                             when             = <" (kw-translations :when) ">
+                             then             = <" (kw-translations :then) ">
+                             and              = <" (kw-translations :and) ">
+                             words            = #'[a-zA-Z0-9./\\_\\-\\'èéàûù ]+'
+                             <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
+                             parameter        = <'<'> parameter_name <'>'>
+                             <data_group>     = <'\"'> data <'\"'> | map
+                             map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
+                             data             = #'[a-zA-Z0-9\\-:,./ ]+'
+                             <step_keyword>   = given | when | then | and
+                             <whitespace>     = #'\\s+'
+                             eol              = '\r' | '\n'
+                      ")))
 
 (def keywords-str {:given "Given "
                    :when "When "
@@ -129,8 +160,12 @@
 (defn generate-step-fn
   "generate a spexec macro call corresponding to the sentence step"
   [step-sentence]
-  (let [sentence-elements (rest (sentence-parser step-sentence))
+  (let [sentence-ast (sentence-parser step-sentence)
+        sentence-elements (rest sentence-ast)
         step-type (ffirst sentence-elements)]
+    (if (insta/failure? sentence-ast)
+      (do (prn (insta/get-failure sentence-ast
+                                  )) (throw (ex-info (:reason (insta/get-failure sentence-ast)) {:parsed-text step-sentence}))))
     (str (case step-type
            :given "(defgiven #\""
            :when  "(defwhen #\""
@@ -150,26 +185,37 @@
            :then  "  (do \"assert the result of when step\"))"
            "  (do \"something\"))"))))
 
+(defn remove-non-word-character [regex-str]
+     ;;transform space to -, remove quote and ", regex group to _
+  (clojure.string/replace regex-str
+                          #"([\W])"
+                          (fn [vec] (if (= (vec 0) " ") "-" ""))))
+
 (defn print-fn-skeleton [step-sentence]
   (println (timbre/color-str :yellow "No function found for step: " step-sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence))))
 
 (def regexes-to-fns (atom {}));;store the regex as a string, as keys can't be regex in a map and also because same regex expression are different object in Java...:(
 
+(defn reset-steps! [] (reset! regexes-to-fns {}))
+
 (defn store-fns-and-regexes! [regex fn]
    (swap! regexes-to-fns assoc (str regex) fn)
    [regex fn])
 
+(defn bind-symbol-from [regex fn]
+  (intern *ns* (symbol (remove-non-word-character (str regex))) fn))
+
 (defn Given [regex fn]
   "create and associate a regex to a function that will match the steps string in scenarios"
-  (store-fns-and-regexes! regex fn))
+  (store-fns-and-regexes! regex (bind-symbol-from regex fn)))
 
 (defn When [regex fn]
   "create and associate a regex to a function that will match the steps string in scenarios"
-  (store-fns-and-regexes! regex fn))
+  (store-fns-and-regexes! regex (bind-symbol-from regex fn)))
 
 (defn Then [regex fn]
   "create and associate a regex to a function that will match the steps string in scenarios"
-  (store-fns-and-regexes! regex fn))
+  (store-fns-and-regexes! regex (bind-symbol-from regex fn)))
 
 (def before (atom []))
 (def after  (atom []))
@@ -239,7 +285,7 @@
 (defn step-sentences [steps-ast]
   (let [v-steps-sentences (-> (zip/vector-zip steps-ast) zip/down zip/rights)]
     (map (fn [[_ [keyword] sentence]]
-           (str (keyword keywords-str) sentence)) v-steps-sentences)))
+           (str (keyword (:en kw-translations-data)) sentence)) v-steps-sentences)))
 
 (defn examples-ast [scenario-ast]
   (first (utils/get-whole-in scenario-ast [:scenario :examples])))
@@ -279,9 +325,9 @@
       nil)))
 
 (defn- scenario-with-examples? [scenario-ast]
-  (not (nil? (utils/get-in-tree scenario-ast [:SPEC :scenario :examples]))))
+  (not (nil? (utils/get-in-tree scenario-ast [:scenario :examples]))))
 
-(defn params-from-example
+(defn data-from-example
   "return a vector of data as string as found in example row"
   [example]
   (vals example))
@@ -305,6 +351,9 @@
     (do (print-fn-skeleton step-sentence)
         nil)))
 
+(defn replace-params-with-data [step-sentence data]
+  )
+
 (defn exec-scenario-with-examples
   "run the scenario for each example rows, then
    for each step sentence find the fn which have a regex that match
@@ -313,16 +362,17 @@
   [scenario-ast]
   (let [step-sentences (step-sentences (steps-sentence-ast scenario-ast))
         examples (examples (examples-ast scenario-ast))]
-    (println  "Run Scenario:" (scenario-sentence scenario-ast) " with " (count examples) " examples")
+    (println  "Run Scenario:" (scenario-sentence scenario-ast) "with" (count examples) " examples")
     (loop [examples examples]
+      (println " ")
       (if-let [example (first examples)]
         (do (loop [step-sentences step-sentences
                    prev-return nil
                    scenario-acc [:scenario (scenario-sentence scenario-ast)]]
               (if-let [step-sentence (first step-sentences)]
                 (let [[fn regex] (matching-fn step-sentence)
-                      params (params-from-example example)
-                      result (execute-fn-for-step step-sentence fn prev-return params)]
+                      data (data-from-example example)
+                      result (execute-fn-for-step step-sentence fn prev-return data)]
                   (recur (rest step-sentences)
                          result
                          (conj scenario-acc [step-sentence result])))))
@@ -368,12 +418,13 @@
           (throw (RuntimeException. (str "type " (type spec) "for spec not accepted (only string or file)")))))))
   :default :file)
 
-(defn- get-spec-files [basedir]
+(defn get-spec-files [basedir]
   (letfn [(find-spec-files [basedir]
             (FileUtils/listFiles
              basedir
-             (RegexFileFilter. "([^.#$](\\S)*.story|[^.#$](\\S)*.feature)")
-             nil))]
+             (into-array ["story" "feature"])
+             true ;;recursive
+             ))]
     (case (str (type basedir))
       "class java.lang.String" (if (.exists (java.io.File. basedir))
                          (find-spec-files (java.io.File. basedir ))
@@ -419,8 +470,15 @@
                   spec-acc)))))))
 
 (defn exec-specs
-  [dirs-or-specs]
-  (if (coll? dirs-or-specs)
-    (doseq [dir-or-spec dirs-or-specs]
-      (exec-spec dir-or-spec))
-    (exec-spec dirs-or-specs)))
+  ([dirs-or-specs]
+   (if (coll? dirs-or-specs)
+     (doseq [dir-or-spec dirs-or-specs]
+       (exec-spec dir-or-spec))
+     (exec-spec dirs-or-specs)))
+  ([]
+   (let [basedir (java.lang.System/getProperty "user.dir")]
+     (exec-specs basedir))))
+
+
+(defn- find-stories-available []
+  (let [basedir (java.lang.System/getProperty "user.dir")]))

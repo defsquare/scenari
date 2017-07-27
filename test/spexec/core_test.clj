@@ -8,6 +8,10 @@
 (timbre/refer-timbre)
 (timbre/set-level! :info)
 
+(test/deftest test-fn-name-from-regex-str
+  (test/is (= "lutilisateur--existe-dans-le-repository" (remove-non-word-character "l'utilisateur (.*) existe dans le repository")))
+  (test/is (= "lutilisateur-azAZ-existe-dans-le-repository" (remove-non-word-character "l'utilisateur ([a-zA-Z]) existe dans le repository"))))
+
 (def example-scenario-unique "
 
 Scenario: create a new product
@@ -148,4 +152,5 @@ When I create a new product with name <product_name> and description <product_de
 ")
 
 (def rules "Rule 1 [] \n when [val1 <val3(> val2] then [throw new exception]\n")
+
 
