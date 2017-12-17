@@ -1,5 +1,5 @@
 # Scenarior - Executable Specification / BDD in Clojure
-![Scenarior logo](https://raw.githubusercontent.com/jgrodziski/scenarior/master/scenarior.png)
+![Scenarior logo](https://raw.githubusercontent.com/jgrodziski/scenarior/master/scenarior.svg)
 
 Scenarior is an Executable Specification [Clojure](http://clojure.org/) library aimed at writing and executing usage scenarios following the [Behavior-Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) - BDD - style. It has an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html), following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) (in short: Given/When/Then), and execute each scenario's _steps_ with associated Clojure code.
 
