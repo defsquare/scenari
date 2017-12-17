@@ -1,13 +1,13 @@
 
-<a href="https://github.com/jgrodziski/scenarior">
-  <img src="https://cdn.rawgit.com/jgrodziski/scenarior/c8bdd82c/scenarior.svg" width="100%" height="250">
+<a href="https://github.com/jgrodziski/scenari">
+  <img src="https://cdn.rawgit.com/jgrodziski/scenari/c8bdd82c/scenari.svg" width="100%" height="250">
 </a>
 
-# Scenarior - Executable Specification / BDD in Clojure
+# Scenari - Executable Specification / BDD in Clojure
 
-Scenarior is an Executable Specification [Clojure](http://clojure.org/) library aimed at writing and executing usage scenarios following the [Behavior-Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) - BDD - style. It has an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html), following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) (in short: Given/When/Then), and execute each scenario's _steps_ with associated Clojure code.
+Scenari is an Executable Specification [Clojure](http://clojure.org/) library aimed at writing and executing usage scenarios following the [Behavior-Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) - BDD - style. It has an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html), following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) (in short: Given/When/Then), and execute each scenario's _steps_ with associated Clojure code.
 
-This library was previously named "Spexec" (https://github.com/zenmodeler/spexec) and under the org name of a [side project I closed recently](http://zenmodeler.com), I moved it under [my personal github id](https://github.com/jgrodziski) and renamed it to "Scenarior" because of Clojure Spec and the confusion it can generates with such close names.
+This library was previously named "Spexec" (https://github.com/zenmodeler/spexec) and under the org name of a [side project I closed recently](http://zenmodeler.com), I moved it under [my personal github id](https://github.com/jgrodziski) and renamed it to "Scenari" because of Clojure Spec and the confusion it can generates with such close names.
 
 * [Installation](#installation)
 * [Basic Usage](#basic-usage)
@@ -23,13 +23,13 @@ This library was previously named "Spexec" (https://github.com/zenmodeler/spexec
 
 ```clojure
 ;;add this dependency to your project.clj file
-[scenarior "1.2.0"]
+[scenari "1.2.0"]
 ;;then in your ns statement
-(:require [scenarior.core :refer :all])
+(:require [scenari.core :refer :all])
 
 ```
 
-[![Clojars Project](http://clojars.org/scenarior/latest-version.svg)](http://clojars.org/scenarior)
+[![Clojars Project](http://clojars.org/scenari/latest-version.svg)](http://clojars.org/scenari)
 
 ## Basic Usage
 
