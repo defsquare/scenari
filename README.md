@@ -1,7 +1,7 @@
-# Spexec - Executable Specification / BDD in Clojure
-![Spexec logo](https://raw.githubusercontent.com/zenmodeler/spexec/master/spexec.png)
+# Scenarior - Executable Specification / BDD in Clojure
+![Scenarior logo](https://raw.githubusercontent.com/jgrodziski/scenarior/master/scenarior.png)
 
-Spexec is an Executable Specification [Clojure](http://clojure.org/) library aimed at writing and executing usage scenarios following the [Behavior-Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) - BDD - style. It has an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html), following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) (in short: Given/When/Then), and execute each scenario's _steps_ with associated Clojure code.
+Scenarior is an Executable Specification [Clojure](http://clojure.org/) library aimed at writing and executing usage scenarios following the [Behavior-Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) - BDD - style. It has an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html), following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) (in short: Given/When/Then), and execute each scenario's _steps_ with associated Clojure code.
 
 * [Installation](#installation)
 * [Basic Usage](#basic-usage)
@@ -17,13 +17,13 @@ Spexec is an Executable Specification [Clojure](http://clojure.org/) library aim
 
 ```clojure
 ;;add this dependency to your project.clj file
-[spexec "1.2.0"]
+[scenarior "1.2.0"]
 ;;then in your ns statement
-(:require [spexec.core :refer :all])
+(:require [scenarior.core :refer :all])
 
 ```
 
-[![Clojars Project](http://clojars.org/spexec/latest-version.svg)](http://clojars.org/spexec)
+[![Clojars Project](http://clojars.org/scenarior/latest-version.svg)](http://clojars.org/scenarior)
 
 ## Basic Usage
 
@@ -197,9 +197,9 @@ Logging is done using the great [Timbre](https://github.com/ptaoussanis/timbre) 
 
 ## License
 
-Spexec is released under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+Scenarior is released under the terms of the [MIT License](http://opensource.org/licenses/MIT).
 
-Copyright © 2015 Jérémie Grodziski jeremie@grodziski.com
+Copyright © 2018 Jérémie Grodziski jeremie@grodziski.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
