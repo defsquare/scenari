@@ -1,6 +1,6 @@
 
 <a href="https://github.com/jgrodziski/scenari">
-  <img src="https://cdn.rawgit.com/jgrodziski/scenari/c8bdd82c/scenari.svg" width="100%" height="250">
+  <img src="https://cdn.rawgit.com/jgrodziski/scenari/68d74b6d/scenari.svg" width="100%" height="250">
 </a>
 
 # Scenari - Executable Specification / BDD in Clojure
