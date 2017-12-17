@@ -7,6 +7,8 @@
 
 Scenarior is an Executable Specification [Clojure](http://clojure.org/) library aimed at writing and executing usage scenarios following the [Behavior-Driven Development](http://en.wikipedia.org/wiki/Behavior-driven_development) - BDD - style. It has an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html), following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) (in short: Given/When/Then), and execute each scenario's _steps_ with associated Clojure code.
 
+This library was previously named "Spexec" (https://github.com/zenmodeler/spexec) and under the org name of a [side project I closed recently](http://zenmodeler.com), I moved it under [my personal github id](https://github.com/jgrodziski) and renamed it to "Scenarior" because of Clojure Spec and the confusion it can generates with such close names.
+
 * [Installation](#installation)
 * [Basic Usage](#basic-usage)
 	* [Write Scenarios in plain text]()
