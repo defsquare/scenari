@@ -1,5 +1,5 @@
-(ns spexec.utilisateurs-steps
-  (:require [spexec.core :as spec :refer [Given When Then exec-specs]]))
+(ns scenari.utilisateurs-steps
+  (:require [scenari.core :as spec :refer [Given When Then exec-specs]]))
 
 (Given #"l'utilisateur (.*) n'existe pas"
        (fn [_ mail1]

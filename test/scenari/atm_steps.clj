@@ -1,5 +1,5 @@
-(ns spexec.atm-steps
-  (:require [spexec.core :refer :all]))
+(ns scenari.atm-steps
+  (:require [scenari.core :refer :all]))
 
 (defrecord Card [number balance holder])
 (defrecord Withdrawal [amount atm-id card-number])

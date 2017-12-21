@@ -1,8 +1,8 @@
-(ns spexec.core-test
+(ns scenari.core-test
   (:require [taoensso.timbre :as timbre]
             [clojure.test :as test]
-            [spexec.core :refer :all]
-            [spexec.utils :as utils])
+            [scenari.core :refer :all]
+            [scenari.utils :as utils])
   (:import [java.util.UUID]))
 
 (timbre/refer-timbre)

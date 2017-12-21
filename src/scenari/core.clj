@@ -29,7 +29,7 @@
             [clojure.edn :only read-string]
             [clojure.pprint :refer :all]
             [clojure.java.io :only [file as-file] :as io]
-            [spexec.utils :as utils])
+            [scenari.utils :as utils :refer [get-in-tree]])
    (:import org.apache.commons.io.FileUtils
             org.apache.commons.io.filefilter.RegexFileFilter))
 (timbre/refer-timbre)
@@ -67,7 +67,8 @@
 (def gherkin-parser (insta/parser
                       (str "SPEC = <whitespace?> narrative? <whitespace?> (scenario <eol?> <eol?>)* | comment
            narrative          = <'Narrative:'|'Feature:'> <sentence>? <eol>? (as_a I_want_to in_order_to |
-                                                                              as_a I_want_to so_that )?
+                                                                              as_a I_want_to so_that | in_order_to as_a I_want_to |
+                                                                              as_a in_order_to I_want_to)?
            in_order_to        = <whitespace>? <'In order to '> #'.*' <eol>
            as_a               = <whitespace>? <'As a '> #'.*' <eol>
            I_want_to          = <whitespace>? <'I want to '> #'.*' <eol>
@@ -277,7 +278,7 @@
                        :so_that " so that "))) (flatten narrative-ast))))
 
 (defn scenario-sentence [scenario-ast]
-  (first (spexec.utils/get-in-tree scenario-ast [:scenario :scenario_sentence])))
+  (first (get-in-tree scenario-ast [:scenario :scenario_sentence])))
 
 (defn steps-sentence-ast [scenario-ast]
   (-> (zip/vector-zip scenario-ast) zip/down zip/right zip/right zip/node))
