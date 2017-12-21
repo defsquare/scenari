@@ -1,4 +1,4 @@
-(ns spexec.utils)
+(ns scenari.utils)
 
 (defn contextual-eval [ctx expr]
   (eval

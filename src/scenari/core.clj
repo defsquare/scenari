@@ -21,7 +21,7 @@
 ;SOFTWARE.
 ;
 
-(ns spexec.core
+(ns scenari.core
   (:require [instaparse.core :as insta]
             [taoensso.timbre :as timbre]
             [clojure.string :as string]
