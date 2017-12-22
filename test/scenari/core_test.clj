@@ -32,6 +32,8 @@ As a user
 I want to login
 So that I gain access to the protected resource
 
+# this is a comment in between
+
 Scenario: create a new product
 # this is a comment
 When I create a new product with name \"iphone 6\" and description \"awesome phone\"
@@ -41,6 +43,8 @@ And a location URL
 # on two lines
 When I invoke a GET request on location URL
 Then I receive a 200 response
+
+# comment between scenarios
 
 Scenario: get product info
 #test

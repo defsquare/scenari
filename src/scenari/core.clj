@@ -65,7 +65,7 @@
    (kw-translations kw kw-translations-data)))
 
 (def gherkin-parser (insta/parser
-                      (str "SPEC = <whitespace?> narrative? <whitespace?> (scenario <eol?> <eol?>)* | comment
+                      (str "SPEC = <whitespace?> <comment?> narrative? <whitespace?> <comment?> (scenario <eol?> <eol?>)*
            narrative          = <'Narrative:'|'Feature:'> <sentence>? <eol>? (as_a I_want_to in_order_to |
                                                                               as_a I_want_to so_that | in_order_to as_a I_want_to |
                                                                               as_a in_order_to I_want_to)?
