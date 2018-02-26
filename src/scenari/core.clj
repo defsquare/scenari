@@ -131,13 +131,14 @@
                              words            = #'[a-zA-Z0-9./\\_\\-\\'èéàûù ]+'
                              <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
                              parameter        = <'<'> parameter_name <'>'>
-                             <data_group>     = <'\"'> data <'\"'> | map
+                             <delimeter>      = <'\"'>
+                             <data_group>     = <delimeter> data <delimeter> | map
                              map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
                              data             = #'[a-zA-Z0-9\\-:,./ ]+'
                              <step_keyword>   = given | when | then | and
                              <whitespace>     = #'\\s+'
                              eol              = '\r' | '\n'
-                      ")))
+")))
 
 (def keywords-str {:given "Given "
                    :when "When "
@@ -155,11 +156,11 @@
 
 (defn- extract-data-as-args [sentence-elements]
   (let [data-count (count (filter (fn [c] (= (first c) :data)) sentence-elements))
-        data-args (clojure.string/join " " (for [i (range data-count)] (str "arg" i)))]
+        data-args (clojure.string/join "_" (for [i (range data-count)] (str "arg" i)))]
     (str "[" data-args "]")))
 
 (defn generate-step-fn
-  "generate a spexec macro call corresponding to the sentence step"
+  "return a string representing a spexec macro call corresponding to the sentence step"
   [step-sentence]
   (let [sentence-ast (sentence-parser step-sentence)
         sentence-elements (rest sentence-ast)

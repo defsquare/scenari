@@ -36,7 +36,7 @@ So that I gain access to the protected resource
 
 Scenario: create a new product
 # this is a comment
-When I create a new product with name \"iphone 6\" and description \"awesome phone\"
+When I create a new product with name \"iphone 6\" and description 'awesome phone'
 Then I receive a response with an id 56422
 And a location URL
 # this a second comment
