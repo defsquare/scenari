@@ -110,7 +110,8 @@
                     then_clause  = <('then'|'Then')> <whitespace> action <whitespace> <eol?>
                     action       = <'['> (#'[a-zA-Z0-9 .]*' | data_holder)* <']'>
                     whitespace   = #'\\s+'
-                    <eol>        = #'\r?\n'"))
+                    eol          = #'\r?\n'
+"))
 
 (def examples-parser (insta/parser
                       "<EXAMPLES>    = <whitespace?> <'Examples:'> <eol> header row* <eol?>
@@ -119,7 +120,7 @@
                        row           = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
                        <value>       = #'[a-zA-Z0-9+ ]*'
                        whitespace    = #'\\s+'
-                       <eol>         = #'\r?\n'"))
+                       eol           = #'\r?\n'"))
 
 (def sentence-parser (insta/parser
                        (str "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
