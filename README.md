@@ -196,6 +196,8 @@ I use the [regex facility](http://clojure.org/other_functions) provided by Cloju
 The gherkin grammar parser is written with the amazing [Instaparse](https://github.com/Engelberg/instaparse) library (I thumbs up for the ClojureScript port by the way!).
 Logging is done using the great [Timbre](https://github.com/ptaoussanis/timbre) logging library.
 
+I did a presentation of the internals of the library at the Clojure Paris User Group and the slides are here: ["Anatomy of a BDD Execution Library in Clojure"](https://speakerdeck.com/jgrodziski/anatomy-of-a-bdd-execution-library-in-clojure).
+
 ## TODOS
 
 * stop-on-failure? as an option for execution
@@ -203,7 +205,7 @@ Logging is done using the great [Timbre](https://github.com/ptaoussanis/timbre) 
 
 ## License
 
-Scenarior is released under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+Scenari is released under the terms of the [MIT License](http://opensource.org/licenses/MIT).
 
 Copyright © 2018 Jérémie Grodziski jeremie@grodziski.com
 
