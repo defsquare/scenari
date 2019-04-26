@@ -1,0 +1,24 @@
+{:paths ["resources" "src"]
+
+ :mvn/repos {"central" {:url "https://repo1.maven.org/maven2/"}
+             "clojars" {:url "https://repo.clojars.org/"}}
+
+ :deps {org.clojure/clojure       {:mvn/version "1.10.0"}
+        org.clojure/tools.logging {:mvn/version "0.4.1"}
+        clojure.java-time         {:mvn/version "0.3.2"}
+        instaparse                {:mvn/version "1.4.10"}
+        commons-io/commons-io     {:mvn/version "2.6"}
+        }
+
+ :aliases {:artifact-name {:extra-deps {metav {:mvn/version "LATEST"}}
+                           :main-opts  ["-m" "metav.display"]}
+           :release       {:extra-deps {metav {:mvn/version "LATEST"}}
+                           :main-opts  ["-m" "metav.release"]}
+           :dev           {}
+           :test          {:extra-paths ["test"]
+                           :extra-deps  {org.clojure/test.check {:mvn/version "RELEASE"}
+                                         metosin/testit         {:mvn/version "0.3.0"}
+                                         lambdaisland/kaocha    {:mvn/version "0.0-367"}}}
+           :runner        {:extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner"
+                                                                   :sha     "76568540e7f40268ad2b646110f237a60295fa3c"}}
+                           :main-opts  ["-m" "cognitect.test-runner" "-d" "test"]}}}

@@ -58,6 +58,8 @@ Then write the code that will gets executed for each scenario steps:
 
 ```clojure
 
+(require 'scenari.core :refer [defgiven defwhen defthen])
+
 (defwhen #"I create a new product with name '(.*)' and description '(.*)'"
 [_ name desc]
   (println "executing my product creation function with params " name desc)
@@ -101,10 +103,14 @@ Every group the regex will find (everything enclosed in parens () in your regex)
 ### Execute Specification
 
 ```Clojure
-(exec-spec "resources/product-catalog.feature")
+(run-scenario "resources/product-catalog.feature")
+
+;;OR
+
+(run-scenarios "resources")
 ```
 
-Get a report of the execution as a Clojure data structure returned by the ```exec-spec``` function
+Get a report of the execution as a Clojure data structure returned by the ```run-scenario``` function
 
 ```Clojure
 {"scenario 1 sentence" 

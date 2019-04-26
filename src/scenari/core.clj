@@ -22,17 +22,15 @@
 ;
 
 (ns scenari.core
-  (:require [instaparse.core :as insta]
-            [taoensso.timbre :as timbre]
-            [clojure.string :as string]
-            [clojure.zip :as zip]
+  (:require [clojure.zip :as zip]
             [clojure.edn :only read-string]
             [clojure.pprint :refer :all]
             [clojure.java.io :only [file as-file] :as io]
-            [scenari.utils :as utils :refer [get-in-tree]])
+            [clojure.string :as string]
+            [instaparse.core :as insta]
+            [scenari.utils :as utils :refer [get-in-tree color-str]])
    (:import org.apache.commons.io.FileUtils
             org.apache.commons.io.filefilter.RegexFileFilter))
-(timbre/refer-timbre)
 
 (def kw-translations-data {:fr {:given    "Etant donné que " :when "Quand " :and "Et "
                                 :then     "Alors " :scenario "Scénario :"
@@ -194,7 +192,7 @@
                           (fn [vec] (if (= (vec 0) " ") "-" ""))))
 
 (defn print-fn-skeleton [step-sentence]
-  (println (timbre/color-str :yellow "No function found for step: " step-sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence))))
+  (println (color-str :yellow "No function found for step: " step-sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence))))
 
 (def regexes-to-fns (atom {}));;store the regex as a string, as keys can't be regex in a map and also because same regex expression are different object in Java...:(
 
@@ -400,7 +398,7 @@
       scenario-acc)))
 
 ;;TODO include deftest with the macro define in the above and with test-ns-hook for running the test in the correct order
-(defmulti exec-spec
+(defmulti run-scenario 
   "Read the spec and execute each step with the code setup by the defgiven, defwhen and defthen macro"
   ;; the dispatch fn do that on the type of the parameter but
   ;; if it's string, it first check if it's the name of the file
@@ -434,18 +432,18 @@
       "class java.io.File" (find-spec-files basedir))))
 
 
-(defmethod exec-spec
+(defmethod run-scenario
   :dir
   [spec-dir]
   (doseq [spec-file (get-spec-files spec-dir)]
     (exec-spec spec-file)))
 
-(defmethod exec-spec
+(defmethod run-scenario
   :file
   [spec-file]
   (exec-spec (slurp spec-file)))
 
-(defmethod exec-spec
+(defmethod run-scenario
   :spec-as-str
   [spec-str]
   ;;for each scenarios
@@ -471,7 +469,7 @@
                   (doseq [after-fn @after] (after-fn))
                   spec-acc)))))))
 
-(defn exec-specs
+(defn run-scenarios
   ([dirs-or-specs]
    (if (coll? dirs-or-specs)
      (doseq [dir-or-spec dirs-or-specs]
