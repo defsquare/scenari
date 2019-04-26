@@ -1,12 +1,9 @@
 (ns scenari.core-test
-  (:require [taoensso.timbre :as timbre]
-            [clojure.test :as test]
+  (:require [clojure.test :as test]
             [scenari.core :refer :all]
             [scenari.utils :as utils])
   (:import [java.util.UUID]))
 
-(timbre/refer-timbre)
-(timbre/set-level! :info)
 
 (test/deftest test-fn-name-from-regex-str
   (test/is (= "lutilisateur--existe-dans-le-repository" (remove-non-word-character "l'utilisateur (.*) existe dans le repository")))
@@ -125,7 +122,7 @@ Then I receive a 200 response
   ;;has to assoc the result, because the side effect in macros when runs normally are lost with eval
   ;;as eval runs in a fresh namespace (see http://stackoverflow.com/questions/6221716/variable-scope-eval-in-clojure)
   (let [[regex fn] (eval (read-string step-fn))]
-    (debug "has executed " step-fn " extract regex " regex " and fn " fn ", new map " regexes-to-fns)
+    (prn "has executed " step-fn " extract regex " regex " and fn " fn ", new map " regexes-to-fns)
     [regex fn]))
 
 (exec-spec "resources/spexec.feature")

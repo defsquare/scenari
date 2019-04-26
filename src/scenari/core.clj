@@ -20,7 +20,6 @@
 ;OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;SOFTWARE.
 ;
-
 (ns scenari.core
   (:require [clojure.zip :as zip]
             [clojure.edn :only read-string]
