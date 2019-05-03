@@ -2,7 +2,7 @@
   (:require [clojure.test :as test]
             [scenari.core :refer :all]
             [scenari.utils :as utils])
-  (:import [java.util.UUID]))
+  (:import java.util.UUID))
 
 
 (test/deftest test-fn-name-from-regex-str
@@ -113,7 +113,8 @@ Then I receive a 200 response
 (defbefore (fn [] (println "this function is executed each time before running scenarios")))
 (defafter (fn [] (println "this function is executed each time after running scenarios")))
 
-(exec-spec (slurp "resources/product-catalog.feature"))
+(run-scenario "resources/product-catalog.feature")
+(run-scenario "product-catalog.feature")
 
 (def step-str "(defgiven #\"this scenario in a file named (.*)\" [_ feature-file-name] (slurp feature-file-name))")
 (def generic-step "the step function: (defwhen #\"I run the scenarios with '(.+)'\" [spec-str my-data] (exec-spec! spec-str)(str \"processed\" my-data)))")
@@ -125,7 +126,7 @@ Then I receive a 200 response
     (prn "has executed " step-fn " extract regex " regex " and fn " fn ", new map " regexes-to-fns)
     [regex fn]))
 
-(exec-spec "resources/spexec.feature")
+(run-scenario "resources/spexec.feature")
 
 (def scenario-with-examples "
 Scenario: create a new product

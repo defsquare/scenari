@@ -24,7 +24,8 @@
   (:require [clojure.zip :as zip]
             [clojure.edn :only read-string]
             [clojure.pprint :refer :all]
-            [clojure.java.io :only [file as-file] :as io]
+            [clojure.java.io :only [file as-file resource] :as io]
+            [clojure.tools.logging :as log :refer [trace]]
             [clojure.string :as string]
             [instaparse.core :as insta]
             [scenari.utils :as utils :refer [get-in-tree color-str]])
@@ -191,9 +192,9 @@
                           (fn [vec] (if (= (vec 0) " ") "-" ""))))
 
 (defn print-fn-skeleton [step-sentence]
-  (println (color-str :yellow "No function found for step: " step-sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence))))
+  (println (color-str :red "No function found for step: " step-sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence))))
 
-(def regexes-to-fns (atom {}));;store the regex as a string, as keys can't be regex in a map and also because same regex expression are different object in Java...:(
+(def regexes-to-fns (atom {}));;store the regex as a string, as keys can't be regex in a map and also because same regex expression are different object in Java...
 
 (defn reset-steps! [] (reset! regexes-to-fns {}))
 
@@ -361,7 +362,7 @@
   [scenario-ast]
   (let [step-sentences (step-sentences (steps-sentence-ast scenario-ast))
         examples (examples (examples-ast scenario-ast))]
-    (println  "Run Scenario:" (scenario-sentence scenario-ast) "with" (count examples) " examples")
+    (println (str "Run Scenario:" (scenario-sentence scenario-ast)) "with" (count examples) "examples")
     (loop [examples examples]
       (println " ")
       (if-let [example (first examples)]
@@ -381,7 +382,7 @@
   "for each step sentence, find the fn which have a regex that match
    execute that fn and input the return as first param of the next fn"
   [scenario-ast]
-  (println  "Run Scenario:" (scenario-sentence scenario-ast))
+  (println  (str "Run Scenario:" (scenario-sentence scenario-ast)))
   (loop [step-sentences (step-sentences (steps-sentence-ast scenario-ast))
          prev-return nil
          scenario-acc [:scenario (scenario-sentence scenario-ast)]]
@@ -396,24 +397,30 @@
           scenario-acc))
       scenario-acc)))
 
+(defn file-from-fs-or-classpath [x]
+  (let [r (io/resource x)
+        f (when (and (instance? java.io.File x) (.exists x)) x)
+        f-str (when (and (instance? String x) (.exists (io/as-file x))) x)]
+    (io/as-file (or r f f-str))))
+
 ;;TODO include deftest with the macro define in the above and with test-ns-hook for running the test in the correct order
-(defmulti run-scenario 
+(defmulti run-scenario
   "Read the spec and execute each step with the code setup by the defgiven, defwhen and defthen macro"
   ;; the dispatch fn do that on the type of the parameter but
   ;; if it's string, it first check if it's the name of the file
   ;; otherwise considers it's the spec itself
   (fn [spec]
-    (letfn [(handle-file-or-dir [file-or-dir]
-              (if (.isFile file-or-dir)
+    (letfn [(file-or-dir [x]
+              (if (.isFile x)
                 :file
-                (if (.isDirectory file-or-dir)
+                (if (.isDirectory x)
                   :dir)))]
-      (if (= (type spec) java.lang.String)
-        (if (.exists (java.io.File. spec))
-          (handle-file-or-dir (java.io.File. spec))
+      (if (instance? String spec)
+        (if-let [f (file-from-fs-or-classpath spec)]
+          (file-or-dir f)
           :spec-as-str)
-        (if (= (type spec) java.io.File)
-          (handle-file-or-dir spec)
+        (if (instance? java.io.File spec)
+          (file-or-dir spec)
           (throw (RuntimeException. (str "type " (type spec) "for spec not accepted (only string or file)")))))))
   :default :file)
 
@@ -435,12 +442,12 @@
   :dir
   [spec-dir]
   (doseq [spec-file (get-spec-files spec-dir)]
-    (exec-spec spec-file)))
+    (run-scenario spec-file)))
 
 (defmethod run-scenario
   :file
   [spec-file]
-  (exec-spec (slurp spec-file)))
+  (run-scenario (slurp (file-from-fs-or-classpath spec-file))))
 
 (defmethod run-scenario
   :spec-as-str
@@ -469,14 +476,14 @@
                   spec-acc)))))))
 
 (defn run-scenarios
+  ([]
+   (let [basedir (java.lang.System/getProperty "user.dir")]
+     (run-scenarios basedir)))
   ([dirs-or-specs]
    (if (coll? dirs-or-specs)
      (doseq [dir-or-spec dirs-or-specs]
-       (exec-spec dir-or-spec))
-     (exec-spec dirs-or-specs)))
-  ([]
-   (let [basedir (java.lang.System/getProperty "user.dir")]
-     (exec-specs basedir))))
+       (run-scenario dir-or-spec))
+     (run-scenario dirs-or-specs))))
 
 
 (defn- find-stories-available []
