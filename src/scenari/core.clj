@@ -127,7 +127,7 @@
                              when             = <" (kw-translations :when) ">
                              then             = <" (kw-translations :then) ">
                              and              = <" (kw-translations :and) ">
-                             words            = #'[a-zA-Z0-9./\\_\\-\\'èéàûù ]+'
+                             words            = #'[a-zA-Z0-9./\\_\\-\\'èéêàûù ]+'
                              <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
                              parameter        = <'<'> parameter_name <'>'> | <'${'> parameter_name <'}'>
                              string           = <'\"'> #'[a-zA-Z0-9\\-:,./ ]+' <'\"'>
