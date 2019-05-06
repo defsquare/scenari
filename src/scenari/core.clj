@@ -171,12 +171,11 @@
            :when  "(defwhen #\""
            :then  "(defthen #\""
            "(defwhen #\"")
-         (apply str (map (fn [c]
-                           (let [what? (first c)]
-                             (case what?
-                               :words (second c)
-                               :data "'(.*)'"
-                               "test"))) (rest sentence-elements)))
+         (apply str (map (fn [[what? data]]
+                           (case what?
+                             :words data
+                             :data "\\\"(.*)\\\""
+                             "test")) (rest sentence-elements)))
          "\"  "
          (extract-data-as-args sentence-elements)
          (case step-type
