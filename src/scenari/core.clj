@@ -168,6 +168,7 @@
                                   )) (throw (ex-info (:reason (insta/get-failure sentence-ast)) {:parsed-text step-sentence}))))
     (str (case step-type
            :given "(defgiven #\""
+           :and   "(defand #\""
            :when  "(defwhen #\""
            :then  "(defthen #\""
            "(defwhen #\"")
@@ -230,6 +231,12 @@
   (swap! after conj f))
 
 (defmacro defgiven
+  "create and associate a regex to function params and body that will match the steps string in scenarios"
+  [regex params & body]
+  `(let [step-fn# (fn [~@params] ~@body)]
+     (Given ~regex step-fn#)))
+
+(defmacro defand
   "create and associate a regex to function params and body that will match the steps string in scenarios"
   [regex params & body]
   `(let [step-fn# (fn [~@params] ~@body)]
