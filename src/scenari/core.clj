@@ -84,7 +84,7 @@
            <step_keywords>    = given | when | then | and
            <whitespace>       = #'\\s+'
            <space>            = ' '  | '\t'
-           <eol>              = '\r' | '\n'
+           <eol>              = #'\r?\n'
            scenario_sentence  = #'.*'
            step_sentence      = step_keywords #'.*'
            sentence           = #'[a-zA-Z0-9\"./\\_\\-\\':<>é@ ]+'
@@ -110,7 +110,7 @@
                     then_clause  = <('then'|'Then')> <whitespace> action <whitespace> <eol?>
                     action       = <'['> (#'[a-zA-Z0-9 .]*' | data_holder)* <']'>
                     whitespace   = #'\\s+'
-                    eol          = '\r' | '\n'"))
+                    <eol>        = #'\r?\n'"))
 
 (def examples-parser (insta/parser
                       "<EXAMPLES>    = <whitespace?> <'Examples:'> <eol> header row* <eol?>
@@ -119,8 +119,7 @@
                        row           = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
                        <value>       = #'[a-zA-Z0-9+ ]*'
                        whitespace    = #'\\s+'
-                       eol           = '\r' | '\n'"))
-
+                       <eol>         = #'\r?\n'"))
 
 (def sentence-parser (insta/parser
                        (str "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
@@ -138,8 +137,7 @@
                              vector           = <'['> elements <']'>
                              <step_keyword>   = given | when | then | and
                              <whitespace>     = #'\\s+'
-                             eol              = '\r' | '\n'
-")))
+                             eol              = #'\r?\n'")))
 
 (def keywords-str {:given "Given "
                    :when "When "
@@ -174,12 +172,11 @@
            :when  "(defwhen #\""
            :then  "(defthen #\""
            "(defwhen #\"")
-         (apply str (map (fn [c]
-                           (let [what? (first c)]
-                             (case what?
-                               :words (second c)
-                               :data "\"(.*)\""
-                               "test"))) (rest sentence-elements)))
+         (apply str (map (fn [[what? data]]
+                           (case what?
+                             :words data
+                             :string "\\\"(.*)\\\""
+                             "test")) (rest sentence-elements)))
          "\"  "
          (extract-data-as-args sentence-elements)
          (case step-type
