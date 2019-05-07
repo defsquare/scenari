@@ -154,7 +154,7 @@
 
 (defn- extract-data-as-args [sentence-elements]
   (let [data-count (count (filter (fn [c] (= (first c) :data)) sentence-elements))
-        data-args (clojure.string/join "_" (for [i (range data-count)] (str "arg" i)))]
+        data-args (clojure.string/join " " (for [i (range data-count)] (str "arg" i)))]
     (str "[state " data-args "]")))
 
 (defn generate-step-fn
