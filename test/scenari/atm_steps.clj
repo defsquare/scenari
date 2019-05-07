@@ -1,5 +1,6 @@
 (ns scenari.atm-steps
-  (:require [scenari.core :refer :all]))
+  (:require [scenari.core :refer :all]
+            [clojure.test :refer [is]]))
 
 (defrecord Card [number balance holder])
 (defrecord Withdrawal [amount atm-id card-number])
@@ -9,7 +10,7 @@
   (conj withdrawal {:result :success}))
 
 (defgiven
-  #"the card holder (.*) has the card (.*) with a (.*) € balance"
+  #"the card holder \"(.*)\" has the card (.*) with a (.*) € balance"
   [_ holder card-number balance]
   (do (->Card card-number balance holder)))
 
@@ -21,10 +22,16 @@
 
 (defthen
   #"he gets (.*) € in cash"
-  [prev-result amount]
-  (do true))
+  [prev amount]
+  (is (= (:amount prev) (+ 1 amount))))
 
 (defthen
   #"the account balance is (.*) €"
   [withdrawal balance]
   (do true))
+
+(defthen #"he gets the message \"(.*)\""
+  [prev msg]
+  msg)
+
+(run-scenario "atm.feature")

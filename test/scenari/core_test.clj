@@ -4,7 +4,6 @@
             [scenari.utils :as utils])
   (:import java.util.UUID))
 
-
 (test/deftest test-fn-name-from-regex-str
   (test/is (= "lutilisateur--existe-dans-le-repository" (remove-non-word-character "l'utilisateur (.*) existe dans le repository")))
   (test/is (= "lutilisateur-azAZ-existe-dans-le-repository" (remove-non-word-character "l'utilisateur ([a-zA-Z]) existe dans le repository"))))
@@ -22,6 +21,12 @@ When I invoke a GET request on location URL
 Then I receive a 200 response
 
 ")
+
+(gherkin-parser example-scenario-unique)
+(sentence-parser "When I create l'a new product with name 'iphone 6' \"test\"and description \"awesome phone\"")
+(sentence-parser "When I create l'a new product with name 'iphone 6' \"test\"and description \"awesome phone\" [123 \"test\"]")
+(sentence-parser "When I create a new product with name <name> and description ${description}")
+(sentence-parser "When I create a new product {:name \"iphone 6\" :description \"awesome phone\"}")
 
 (def example-scenario-multiple "
 Narrative:
@@ -126,7 +131,7 @@ Then I receive a 200 response
     (prn "has executed " step-fn " extract regex " regex " and fn " fn ", new map " regexes-to-fns)
     [regex fn]))
 
-(run-scenario "resources/spexec.feature")
+(run-scenario "resources/scenari.feature")
 
 (def scenario-with-examples "
 Scenario: create a new product
@@ -140,6 +145,13 @@ Examples:
   | iPhone 6+     | bigger telephone |
   | iPad          | tablet           |
 ")
+
+(examples (examples-ast (gherkin-parser scenario-with-examples)))
+(examples-ast (gherkin-parser scenario-with-examples))
+(utils/get-whole-in (gherkin-parser scenario-with-examples) [:SPEC :scenario :examples])
+(utils/get-in-tree (gherkin-parser scenario-with-examples) [:SPEC :scenario :examples])
+(get-in (gherkin-parser scenario-with-examples) [1 3])
+(gherkin-parser scenario-with-examples)
 
 (def examples-alone "
 Examples:
