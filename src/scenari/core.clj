@@ -26,6 +26,7 @@
             [clojure.pprint :refer :all]
             [clojure.java.io :only [file as-file resource] :as io]
             [clojure.tools.logging :as log :refer [trace]]
+            [clojure.test :refer [deftest testing]]
             [clojure.string :as string]
             [instaparse.core :as insta]
             [scenari.utils :as utils :refer [get-in-tree color-str]])
@@ -93,7 +94,7 @@
            <column_name>      = <whitespace?> #'[a-zA-Z0-9_\\- ]+' <whitespace?>
            row                = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
            <value>            = #'[a-zA-Z0-9+@. ]*'
-           word               = #'[a-zA-Z]+'
+           word               = #'[a-zA-Z$€]+'
            number             = #'[0-9]+'
            ")))
 
@@ -120,6 +121,7 @@
                        whitespace    = #'\\s+'
                        eol           = '\r' | '\n'"))
 
+
 (def sentence-parser (insta/parser
                        (str "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
                              given            = <" (kw-translations :given) ">
@@ -128,11 +130,12 @@
                              and              = <" (kw-translations :and) ">
                              words            = #'[a-zA-Z0-9./\\_\\-\\'èéàûù ]+'
                              <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
-                             parameter        = <'<'> parameter_name <'>'>
-                             <delimeter>      = <'\"'>
-                             <data_group>     = <delimeter> data <delimeter> | map
+                             parameter        = <'<'> parameter_name <'>'> | <'${'> parameter_name <'}'>
+                             string           = <'\"'> #'[a-zA-Z0-9\\-:,./ ]+' <'\"'>
+                             <data_group>     = string | map | vector
                              map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
-                             data             = #'[a-zA-Z0-9\\-:,./ ]+'
+                             elements         = (#'\".+\"|[0-9]+' <whitespace>?)*
+                             vector           = <'['> elements <']'>
                              <step_keyword>   = given | when | then | and
                              <whitespace>     = #'\\s+'
                              eol              = '\r' | '\n'
@@ -143,7 +146,7 @@
                    :then "Then "
                    :and "And "})
 
-(defn spexec-pprint-dispatch [str]
+(defn scenari-pprint-dispatch [str]
   (if (reduce (fn [prev curr] (or prev (.startsWith str curr)))
               false
               (vals keywords-str))
@@ -153,7 +156,7 @@
       (print str))))
 
 (defn- extract-data-as-args [sentence-elements]
-  (let [data-count (count (filter (fn [c] (= (first c) :data)) sentence-elements))
+  (let [data-count (count (filter (fn [c] (= (first c) :string)) sentence-elements))
         data-args (clojure.string/join "_" (for [i (range data-count)] (str "arg" i)))]
     (str "[" data-args "]")))
 
@@ -175,7 +178,7 @@
                            (let [what? (first c)]
                              (case what?
                                :words (second c)
-                               :data "'(.*)'"
+                               :data "\"(.*)\""
                                "test"))) (rest sentence-elements)))
          "\"  "
          (extract-data-as-args sentence-elements)
@@ -288,7 +291,7 @@
            (str (keyword (:en kw-translations-data)) sentence)) v-steps-sentences)))
 
 (defn examples-ast [scenario-ast]
-  (first (utils/get-whole-in scenario-ast [:scenario :examples])))
+  (utils/get-whole-in scenario-ast [:SPEC :scenario :examples]))
 
 (defn examples
   "return a vector of map with header name as key and row value"
@@ -344,8 +347,8 @@
             (apply fn prev-return params)
             (catch java.lang.Exception e {:failure true :message (.getMessage e)}))
           ]
-      (with-pprint-dispatch spexec-pprint-dispatch (pprint step-sentence))
-      (with-pprint-dispatch spexec-pprint-dispatch (pprint (str "=> " result)))
+      (with-pprint-dispatch scenari-pprint-dispatch (pprint step-sentence))
+      (with-pprint-dispatch scenari-pprint-dispatch (pprint (str "=> " result)))
       (trace "executed fn " fn " with " prev-return " and " params ", result => " result)
       result)
     (do (print-fn-skeleton step-sentence)
@@ -388,7 +391,7 @@
          scenario-acc [:scenario (scenario-sentence scenario-ast)]]
     (if-let [step-sentence (first step-sentences)]
       (let [[fn regex] (matching-fn step-sentence)]
-        (if (and (not (nil? fn)) (not (nil? regex)))
+        (if (and fn regex)
           (let [params (params-from-steps regex step-sentence)
                 result (execute-fn-for-step step-sentence fn prev-return params)]
             (recur (rest step-sentences)
@@ -411,10 +414,8 @@
   ;; otherwise considers it's the spec itself
   (fn [spec]
     (letfn [(file-or-dir [x]
-              (if (.isFile x)
-                :file
-                (if (.isDirectory x)
-                  :dir)))]
+              (cond (.isFile x) :file
+                    (.isDirectory x) :dir))]
       (if (instance? String spec)
         (if-let [f (file-from-fs-or-classpath spec)]
           (file-or-dir f)
@@ -488,3 +489,11 @@
 
 (defn- find-stories-available []
   (let [basedir (java.lang.System/getProperty "user.dir")]))
+
+
+(defmacro def-scenarios
+  ""
+  [s]
+  (let [basedir (java.lang.System/getProperty "user.dir")]
+    (run-scenarios basedir)) 
+  )
