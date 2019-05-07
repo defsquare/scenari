@@ -85,6 +85,12 @@ Then I receive a 200 response
 (test/deftest get-in-ast
   (test/is (= "product manager" (first (utils/get-in-tree example-ast [:SPEC :narrative :as_a])))))
 
+(test/deftest generate-step-fn-test
+  (test/is (= (generate-step-fn "When I create a new product with name \"iphone 6\"")
+              "(defwhen #\"I create a new product with name \\\"(.*)\\\"\"  [state arg0]  (do \"something\"))"))
+  (test/is (= (generate-step-fn "When I create a new product with name \"iphone 6\" and description \"awesome phone\"")
+              "(defwhen #\"I create a new product with name \\\"(.*)\\\" and description \\\"(.*)\\\"\"  [state arg0 arg1]  (do \"something\"))")))
+
 (test/deftest test-parser []
   (gherkin-parser example-scenario-multiple)
   (gherkin-parser example-scenario-unique))
