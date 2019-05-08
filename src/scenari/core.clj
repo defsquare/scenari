@@ -491,14 +491,9 @@
        (run-scenario dir-or-spec))
      (run-scenario dirs-or-specs))))
 
-
 (defn- find-stories-available []
   (let [basedir (java.lang.System/getProperty "user.dir")]))
 
-
-(defmacro def-scenarios
-  ""
-  [s]
-  (let [basedir (java.lang.System/getProperty "user.dir")]
-    (run-scenarios basedir)) 
-  )
+(defmacro defscenarios
+  "associate scenarios in a file or resource given as a parameter with the steps contained in the enclosing namespace"
+  [s])
