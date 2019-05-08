@@ -198,6 +198,13 @@ Then I should get 'processedmydatavalues' from scenario file 'resources/spexec.f
 
 I'm used to [JBehave](http://jbehave.org/) and I wanted a BDD framework with an [external DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html) following the [gherkin grammar](https://github.com/cucumber/cucumber/wiki/Gherkin) but also with an easy and fast setup and with steps written in [Clojure](http://clojure.org/). The previous BDD attempt I known in Clojure were all with an [internal DSL](http://www.martinfowler.com/bliki/DomainSpecificLanguage.html). I prefer an external one because I think it's easier to share the scenarios with a domain expert. I you prefer an internal DSL BDD Framework, have a look at [Speclj](http://speclj.com/).
 
+Proper compatibility with traditional clojure.test interfaces is needed, for instance we could make the following relations between Scenari/BDD concepts and clojure.test:
+- A scenario execution is like a `deftest`. Particularly, we need to associate steps with Gherkin scenarios defined in one or more feature files. For that we would define this association between steps (`defgiven`, `defwhen` and `defthen`) and scenerios with `(defscenarios "my.feature")`. The execution would then be run with `(run-scenarios)` much like `(run-tests)`. In case of examples table used to feed the scenario with data, each data row would be associated with a new testing context for each steps (the `testing` context description would be the steps sentence with all data placeholder replaced with the actual ones).
+- A scenario's step is like a `testing` context inside a `deftest`. 
+Also, steps and scenarios association must be isolated within namespace to avoid collisions when the same scenarios are used with different steps (like ones for domain test, others for integration testing, etc.).
+The compatibility with clojure.test would also be with its various reports available (`:pass`, `:fail`, etc.) with reports specific to narrative, scenarios and steps. 
+Concerning assertion, steps could contains `clojure.test/is` assertions or throws exception that will be handled properly like clojure.test ones. 
+
 I use the [regex facility](http://clojure.org/other_functions) provided by Clojure (#"regex expression"), not the most readable with all that parens, sharps, double-quote, etc. but the most supple when you need to extract specific data from your sentence. 
 The gherkin grammar parser is written with the amazing [Instaparse](https://github.com/Engelberg/instaparse) library (I thumbs up for the ClojureScript port by the way!).
 Logging is done using the great [Timbre](https://github.com/ptaoussanis/timbre) logging library.
