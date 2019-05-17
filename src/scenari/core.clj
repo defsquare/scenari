@@ -86,9 +86,10 @@
            <space>            = ' '  | '\t'
            <eol>              = #'\r?\n'
            scenario_sentence  = #'.*'
-           step_sentence      = step_keywords #'.*'
+           step_sentence      = step_keywords #'.*' (<eol> tab_params)?
            sentence           = #'[a-zA-Z0-9\"./\\_\\-\\':<>é@ ]+'
            examples           = <whitespace?> examples-keywords <eol> header row* <eol?>
+           tab_params         = <whitespace?> header row* <eol?>
            <examples-keywords>= <" (kw-translations :examples) ">
            header             = <whitespace?> (<'|'> column_name)+ <'|'> <eol>
            <column_name>      = <whitespace?> #'[a-zA-Z0-9_\\- ]+' <whitespace?>
@@ -123,7 +124,7 @@
                        eol           = #'\r?\n'"))
 
 (def sentence-parser (insta/parser
-                       (str "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
+                       (str "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* (<eol> tab_params)? <eol>?
                              given            = <" (kw-translations :given) ">
                              when             = <" (kw-translations :when) ">
                              then             = <" (kw-translations :then) ">
@@ -138,6 +139,12 @@
                              vector           = <'['> elements <']'>
                              <step_keyword>   = given | when | then | and
                              <whitespace>     = #'\\s+'
+                             tab_params       = <whitespace?> header row* <eol?>
+                             header           = <whitespace?> (<'|'> column_name)+ <'|'> <eol>
+                             <column_name>    = <whitespace?> #'[a-zA-Z0-9_\\- ]+' <whitespace?>
+                             row              = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
+                             <value>          = #'[a-zA-Z0-9+ ]*'
+                             whitespace       = #'\\s+'
                              eol              = #'\r?\n'")))
 
 (def keywords-str {:given "Given "
@@ -155,10 +162,11 @@
       (print str))))
 
 (defn- extract-data-as-args [sentence-elements]
-  (let [data-count (count (filter (fn [c] (= (first c) :string)) sentence-elements))
-        data-args (clojure.string/join "_" (for [i (range data-count)] (str "arg" i)))]
+  (let [data-count (count (filter (fn [c] (contains? #{:string :tab_params} (first c))) sentence-elements))
+        data-args (clojure.string/join " " (for [i (range data-count)] (str "arg" i)))]
     (str "[state " data-args "]")))
 
+; TODO input must be a data struct with the sentence for regex matching and raw-sentence that includes tab params
 (defn generate-step-fn
   "return a string representing a spexec macro call corresponding to the sentence step"
   [step-sentence]
@@ -194,7 +202,8 @@
                           (fn [vec] (if (= (vec 0) " ") "-" ""))))
 
 (defn print-fn-skeleton [step-sentence]
-  (println (color-str :red "No function found for step: " step-sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence))))
+  (let [{:keys [sentence tab_params]} step-sentence]
+    (println (color-str :red "No function found for step: " sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence)))))
 
 (def regexes-to-fns (atom {}));;store the regex as a string, as keys can't be regex in a map and also because same regex expression are different object in Java...
 
@@ -290,10 +299,19 @@
 (defn steps-sentence-ast [scenario-ast]
   (-> (zip/vector-zip scenario-ast) zip/down zip/right zip/right zip/node))
 
+(defn tab-params->map [tab-params]
+  (let [[_ [_ & headers] & rows] tab-params
+        param-names (map (comp keyword string/trim) headers)
+        params-values (map (comp #(map string/trim %) rest) rows)]
+    (vec (map #(apply hash-map (interleave param-names %)) params-values))))
+
 (defn step-sentences [steps-ast]
   (let [v-steps-sentences (-> (zip/vector-zip steps-ast) zip/down zip/rights)]
-    (map (fn [[_ [keyword] sentence]]
-           (str (keyword (:en kw-translations-data)) sentence)) v-steps-sentences)))
+    (map (fn [[_ [keyword] sentence tab-params]]
+           (let [tab-params-map (when tab-params {:tab_params (tab-params->map tab-params)})]
+             (merge {:sentence (str (keyword (:en kw-translations-data)) sentence)}
+                    tab-params-map)))
+         v-steps-sentences)))
 
 (defn examples-ast [scenario-ast]
   (utils/get-whole-in scenario-ast [:SPEC :scenario :examples]))
@@ -309,28 +327,33 @@
   "return the tuple of fn/regex as a vector that match the step-sentence"
   [step-sentence]
   ;;first map each regex string into a regex object then filter the regex that match
-  (let [matching-regexes
-        (filter (fn [regex]
-                  (not (empty? (re-find regex step-sentence))))
-                (map re-pattern (keys @regexes-to-fns)))]
+  (let [{:keys [sentence]} step-sentence
+        matching-regexes (filter (fn [regex]
+                                   (not (empty? (re-find regex sentence))))
+                                 (map re-pattern (keys @regexes-to-fns)))]
     (if (> (count matching-regexes) 1)
-      (throw (RuntimeException. (str (count matching-regexes) " matching functions were found for the following step sentence:\n " step-sentence ", please refine your regexes that match: \n" (apply str matching-regexes)))))
+      (throw (RuntimeException. (str (count matching-regexes) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" (apply str matching-regexes)))))
     (if (= (count matching-regexes) 0)
-      (do (print-fn-skeleton step-sentence)
+      (do (print-fn-skeleton sentence)
           nil))
     [(get @regexes-to-fns (str (first matching-regexes))) (first matching-regexes)]))
+
+(defn params-from-sentence [regex sentence]
+  (let [find-result (re-find regex sentence)]
+    (if (coll? find-result)
+      (map (fn [data] (let [data-evaluated (clojure.edn/read-string data)]
+                        (if (coll? data-evaluated) data-evaluated data)))
+           (rest find-result))
+      nil)))
 
 (defn params-from-steps
   "return a vector of data as string as found in groups the regex found in the step sentence,
   if the data is a clojure data structure then it will be evaluated otherwise returned as a string,
   nil if no groups are found"
   [regex step-sentence]
-  (let [find-result (re-find regex step-sentence)]
-    (if (coll? find-result)
-      (map (fn [data] (let [data-evaluated (clojure.edn/read-string data)]
-                       (if (coll? data-evaluated) data-evaluated data)))
-           (rest find-result))
-      nil)))
+  (let [{:keys [sentence tab_params]} step-sentence
+        params-from-sentence (params-from-sentence regex sentence)]
+    (into (vec params-from-sentence) (when tab_params [tab_params]))))
 
 (defn- scenario-with-examples? [scenario-ast]
   (not (nil? (utils/get-in-tree scenario-ast [:scenario :examples]))))
@@ -377,13 +400,13 @@
         (do (loop [step-sentences step-sentences
                    prev-return nil
                    scenario-acc [:scenario (scenario-sentence scenario-ast)]]
-              (if-let [step-sentence (first step-sentences)]
+              (if-let [{:keys [sentence] :as step-sentence} (first step-sentences)]
                 (let [[fn regex] (matching-fn step-sentence)
                       data (data-from-example example)
                       result (execute-fn-for-step step-sentence fn prev-return data)]
                   (recur (rest step-sentences)
                          result
-                         (conj scenario-acc [step-sentence result])))))
+                         (conj scenario-acc [sentence result])))))
             (recur (rest examples)))))))
 
 (defn exec-scenario
@@ -394,14 +417,14 @@
   (loop [step-sentences (step-sentences (steps-sentence-ast scenario-ast))
          prev-return nil
          scenario-acc [:scenario (scenario-sentence scenario-ast)]]
-    (if-let [step-sentence (first step-sentences)]
+    (if-let [{:keys [sentence] :as step-sentence} (first step-sentences)]
       (let [[fn regex] (matching-fn step-sentence)]
         (if (and fn regex)
           (let [params (params-from-steps regex step-sentence)
-                result (execute-fn-for-step step-sentence fn prev-return params)]
+                result (execute-fn-for-step sentence fn prev-return params)]
             (recur (rest step-sentences)
                    result
-                   (conj scenario-acc [step-sentence result])))
+                   (conj scenario-acc [sentence result])))
           scenario-acc))
       scenario-acc)))
 
