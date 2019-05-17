@@ -173,4 +173,90 @@ When I create a new product with name <product_name> and description <product_de
 
 (def rules "Rule 1 [] \n when [val1 <val3(> val2] then [throw new exception]\n")
 
+(def scenario-with-tab-param "
+Scenario: create a new product
+# this is a comment
+When I create a new products
+  | product_name  | product_desc     |
+  | iPhone 6      | telephone        |
+  | iPhone 6+     | bigger telephone |
+  | iPad          | tablet           |
+Then I receive a response with an id")
 
+(test/deftest scenario-with-tab-params-test
+  (test/is (= (gherkin-parser scenario-with-tab-param)
+              [:SPEC
+               [:scenario
+                [:scenario_sentence " create a new product"]
+                [:steps
+                 [:step_sentence
+                  [:when]
+                  "I create a new products"
+                  [:tab_params
+                   [:header " product_name  " " product_desc     "]
+                   [:row " iPhone 6      " " telephone        "]
+                   [:row " iPhone 6+     " " bigger telephone "]
+                   [:row " iPad          " " tablet           "]]]
+                 [:step_sentence [:then] "I receive a response with an id"]]]])))
+
+(def sentence-with-tab-params "When I create a new products
+  | product_name  | product_desc     |
+  | iPhone 6      | telephone        |
+  | iPhone 6+     | bigger telephone |
+  | iPad          | tablet           |
+")
+
+(test/deftest sentence-with-tab-params-test
+  (test/is (= (generate-step-fn sentence-with-tab-params)
+              "(defwhen #\"I create a new products\"  [state arg0]  (do \"something\"))"))
+  (test/is (= (sentence-parser sentence-with-tab-params)
+              [:SENTENCE
+               [:when]
+               [:words "I create a new products"]
+               [:tab_params
+                [:header " product_name  " " product_desc     "]
+                [:row " iPhone 6      " " telephone        "]
+                [:row " iPhone 6+     " " bigger telephone "]
+                [:row " iPad          " " tablet           "]]])))
+
+(test/deftest params-from-steps-test
+  (test/is (=
+             (params-from-steps #"When I create a new products \"(.*)\" \"(.*)\"" {:sentence   "When I create a new products \"toto\" \"coucou\""
+                                                                                   :tab_params [{:product_name "iPhone 6" :product_desc "telephone"}]})
+             ["toto" "coucou" [{:product_name "iPhone 6", :product_desc "telephone"}]]))
+  (test/is (=
+             (params-from-steps #"When I create a new products \"(.*)\" \"(.*)\"" {:sentence "When I create a new products \"toto\" \"coucou\""})
+             ["toto" "coucou"]))
+  (test/is (=
+             (params-from-steps #"When I create a new products" {:sentence "When I create a new products"})
+             []))
+  (test/is (=
+             (params-from-steps #"When I create a new products" {:sentence "When I create a new products" :tab_params [{:product_name "iPhone 6" :product_desc "telephone"}]})
+             [{:product_name "iPhone 6", :product_desc "telephone"}])))
+
+(test/deftest step-sentences-test
+  (test/testing "with tabs params"
+    (test/is (= (step-sentences [:steps
+                                 [:step_sentence
+                                  [:when]
+                                  "I create a new products"
+                                  [:tab_params
+                                   [:header " product_name  " " product_desc     "]
+                                   [:row " iPhone 6      " " telephone        "]
+                                   [:row " iPhone 6+     " " bigger telephone "]
+                                   [:row " iPad          " " tablet           "]]]
+                                 [:step_sentence
+                                  [:then]
+                                  "coucou"]])
+                [{:sentence   "When I create a new products"
+                  :tab_params [{:product_desc "telephone" :product_name "iPhone 6"}
+                               {:product_desc "bigger telephone" :product_name "iPhone 6+"}
+                               {:product_desc "tablet" :product_name "iPad"}]}
+                 {:sentence "Then coucou"}]))))
+
+(defwhen #"I create a new products" [state arg0] (test/testing "assert tab params"
+                                                   (test/is (= (count arg0) 3))
+                                                   (test/is (= (:product_name (first arg0)) "iPhone 6"))))
+(defthen #"I receive a response with an id"  [state ]  (do "assert the result of when step"))
+
+(run-scenario scenario-with-tab-param)
