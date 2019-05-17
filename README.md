@@ -23,7 +23,7 @@ This library was previously named "Spexec" (https://github.com/zenmodeler/spexec
 
 ```clojure
 ;;add this dependency to your project.clj file
-[scenari "1.2.0"]
+[scenari "1.4.0"]
 ;;then in your ns statement
 (:require [scenari.core :refer :all])
 
@@ -207,7 +207,6 @@ Concerning assertion, steps could contains `clojure.test/is` assertions or throw
 
 I use the [regex facility](http://clojure.org/other_functions) provided by Clojure (#"regex expression"), not the most readable with all that parens, sharps, double-quote, etc. but the most supple when you need to extract specific data from your sentence. 
 The gherkin grammar parser is written with the amazing [Instaparse](https://github.com/Engelberg/instaparse) library (I thumbs up for the ClojureScript port by the way!).
-Logging is done using the great [Timbre](https://github.com/ptaoussanis/timbre) logging library.
 
 I did a presentation of the internals of the library at the Clojure Paris User Group and the slides are here: ["Anatomy of a BDD Execution Library in Clojure"](https://speakerdeck.com/jgrodziski/anatomy-of-a-bdd-execution-library-in-clojure).
 
