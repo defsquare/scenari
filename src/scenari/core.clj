@@ -170,9 +170,11 @@
 (defn generate-step-fn
   "return a string representing a spexec macro call corresponding to the sentence step"
   [step-sentence]
-  (let [sentence-ast (sentence-parser step-sentence)
-        sentence-elements (rest sentence-ast)
-        step-type (ffirst sentence-elements)]
+  (let [{:keys [sentence tab_params]} step-sentence
+        sentence-ast (sentence-parser sentence)
+        [_ [step-type] & sentence-elements] sentence-ast
+        sentence-elements (if tab_params (conj sentence-elements [:tab_params []]) sentence-elements)
+        _ (println sentence-elements)]
     (if (insta/failure? sentence-ast)
       (do (prn (insta/get-failure sentence-ast
                                   )) (throw (ex-info (:reason (insta/get-failure sentence-ast)) {:parsed-text step-sentence}))))
@@ -202,7 +204,7 @@
                           (fn [vec] (if (= (vec 0) " ") "-" ""))))
 
 (defn print-fn-skeleton [step-sentence]
-  (let [{:keys [sentence tab_params]} step-sentence]
+  (let [{:keys [sentence]} step-sentence]
     (println (color-str :red "No function found for step: " sentence "\nYou may define a corresponding step function with: \n   " (generate-step-fn step-sentence)))))
 
 (def regexes-to-fns (atom {}));;store the regex as a string, as keys can't be regex in a map and also because same regex expression are different object in Java...
@@ -334,7 +336,7 @@
     (if (> (count matching-regexes) 1)
       (throw (RuntimeException. (str (count matching-regexes) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" (apply str matching-regexes)))))
     (if (= (count matching-regexes) 0)
-      (do (print-fn-skeleton sentence)
+      (do (print-fn-skeleton step-sentence)
           nil))
     [(get @regexes-to-fns (str (first matching-regexes))) (first matching-regexes)]))
 
