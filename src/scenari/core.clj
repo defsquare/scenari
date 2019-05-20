@@ -169,7 +169,7 @@
   (let [{:keys [sentence tab_params]} step-sentence
         sentence-ast (sentence-parser sentence)
         [_ [step-type] & sentence-elements] sentence-ast
-        sentence-elements (if tab_params (conj sentence-elements [:tab_params []]) sentence-elements)]
+        sentence-elements (if tab_params (conj (vec sentence-elements) [:tab_params []]) sentence-elements)]
     (if (insta/failure? sentence-ast)
       (do (prn (insta/get-failure sentence-ast
                                   )) (throw (ex-info (:reason (insta/get-failure sentence-ast)) {:parsed-text step-sentence}))))
@@ -183,6 +183,7 @@
                            (case what?
                              :words data
                              :string "\\\"(.*)\\\""
+                             :tab_params ""
                              "test")) sentence-elements))
          "\"  "
          (extract-data-as-args sentence-elements)
