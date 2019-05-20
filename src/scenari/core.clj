@@ -124,7 +124,7 @@
                        eol           = #'\r?\n'"))
 
 (def sentence-parser (insta/parser
-                       (str "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* (<eol> tab_params)? <eol>?
+                       (str "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
                              given            = <" (kw-translations :given) ">
                              when             = <" (kw-translations :when) ">
                              then             = <" (kw-translations :then) ">
@@ -139,10 +139,6 @@
                              vector           = <'['> elements <']'>
                              <step_keyword>   = given | when | then | and
                              <whitespace>     = #'\\s+'
-                             tab_params       = <whitespace?> header row* <eol?>
-                             header           = <whitespace?> (<'|'> column_name)+ <'|'> <eol>
-                             <column_name>    = <whitespace?> #'[a-zA-Z0-9_\\- ]+' <whitespace?>
-                             row              = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
                              <value>          = #'[a-zA-Z0-9+ ]*'
                              whitespace       = #'\\s+'
                              eol              = #'\r?\n'")))
@@ -173,8 +169,7 @@
   (let [{:keys [sentence tab_params]} step-sentence
         sentence-ast (sentence-parser sentence)
         [_ [step-type] & sentence-elements] sentence-ast
-        sentence-elements (if tab_params (conj sentence-elements [:tab_params []]) sentence-elements)
-        _ (println sentence-elements)]
+        sentence-elements (if tab_params (conj sentence-elements [:tab_params []]) sentence-elements)]
     (if (insta/failure? sentence-ast)
       (do (prn (insta/get-failure sentence-ast
                                   )) (throw (ex-info (:reason (insta/get-failure sentence-ast)) {:parsed-text step-sentence}))))
@@ -188,7 +183,7 @@
                            (case what?
                              :words data
                              :string "\\\"(.*)\\\""
-                             "test")) (rest sentence-elements)))
+                             "test")) sentence-elements))
          "\"  "
          (extract-data-as-args sentence-elements)
          (case step-type
