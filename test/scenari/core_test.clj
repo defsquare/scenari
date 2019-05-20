@@ -86,10 +86,14 @@ Then I receive a 200 response
   (test/is (= "product manager" (first (utils/get-in-tree example-ast [:SPEC :narrative :as_a])))))
 
 (test/deftest generate-step-fn-test
-  (test/is (= (generate-step-fn "When I create a new product with name \"iphone 6\"")
+  (test/is (= (generate-step-fn {:sentence "When I create a new product with name \"iphone 6\""})
               "(defwhen #\"I create a new product with name \\\"(.*)\\\"\"  [state arg0]  (do \"something\"))"))
-  (test/is (= (generate-step-fn "When I create a new product with name \"iphone 6\" and description \"awesome phone\"")
-              "(defwhen #\"I create a new product with name \\\"(.*)\\\" and description \\\"(.*)\\\"\"  [state arg0 arg1]  (do \"something\"))")))
+  (test/is (= (generate-step-fn {:sentence "When I create a new product with name \"iphone 6\" and description \"awesome phone\""})
+              "(defwhen #\"I create a new product with name \\\"(.*)\\\" and description \\\"(.*)\\\"\"  [state arg0 arg1]  (do \"something\"))"))
+  (test/is (= (generate-step-fn {:sentence "When I create a new products" :tab_params [{:product_name "iPhone 6" :product_desc "telephone"}]})
+              "(defwhen #\"I create a new products\"  [state arg0]  (do \"something\"))"))
+  (test/is (= (generate-step-fn {:sentence "When I create a new product with name \"iPhone 6\" and others" :tab_params [{:product_name "iPhone 7" :product_desc "telephone"}]})
+              "(defwhen #\"I create a new product with name \\\"(.*)\\\" and others\"  [state arg0 arg1]  (do \"something\"))")))
 
 (test/deftest test-parser []
   (gherkin-parser example-scenario-multiple)
@@ -199,26 +203,6 @@ Then I receive a response with an id")
                    [:row " iPad          " " tablet           "]]]
                  [:step_sentence [:then] "I receive a response with an id"]]]])))
 
-(def sentence-with-tab-params "When I create a new products
-  | product_name  | product_desc     |
-  | iPhone 6      | telephone        |
-  | iPhone 6+     | bigger telephone |
-  | iPad          | tablet           |
-")
-
-(test/deftest sentence-with-tab-params-test
-  (test/is (= (generate-step-fn sentence-with-tab-params)
-              "(defwhen #\"I create a new products\"  [state arg0]  (do \"something\"))"))
-  (test/is (= (sentence-parser sentence-with-tab-params)
-              [:SENTENCE
-               [:when]
-               [:words "I create a new products"]
-               [:tab_params
-                [:header " product_name  " " product_desc     "]
-                [:row " iPhone 6      " " telephone        "]
-                [:row " iPhone 6+     " " bigger telephone "]
-                [:row " iPad          " " tablet           "]]])))
-
 (test/deftest params-from-steps-test
   (test/is (=
              (params-from-steps #"When I create a new products \"(.*)\" \"(.*)\"" {:sentence   "When I create a new products \"toto\" \"coucou\""
@@ -232,7 +216,7 @@ Then I receive a response with an id")
              []))
   (test/is (=
              (params-from-steps #"When I create a new products" {:sentence "When I create a new products" :tab_params [{:product_name "iPhone 6" :product_desc "telephone"}]})
-             [{:product_name "iPhone 6", :product_desc "telephone"}])))
+             [[{:product_name "iPhone 6", :product_desc "telephone"}]])))
 
 (test/deftest step-sentences-test
   (test/testing "with tabs params"
