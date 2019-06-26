@@ -94,7 +94,7 @@
            header             = <whitespace?> (<'|'> column_name)+ <'|'> <eol>
            <column_name>      = <whitespace?> #'[a-zA-Z0-9_\\- ]+' <whitespace?>
            row                = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
-           <value>            = #'[a-zA-Z0-9+@. ]*'
+           <value>            = #'[a-zA-Z0-9@\\-\\+:,./ ]*'
            word               = #'[a-zA-Z$€]+'
            number             = #'[0-9]+'
            ")))
