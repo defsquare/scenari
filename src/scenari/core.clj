@@ -339,8 +339,10 @@
 (defn params-from-sentence [regex sentence]
   (let [find-result (re-find regex sentence)]
     (if (coll? find-result)
-      (map (fn [data] (let [data-evaluated (clojure.edn/read-string data)]
-                        (if (coll? data-evaluated) data-evaluated data)))
+      (map (fn [data]
+             (if (contains? #{\( \{ \# \[} (first data))
+               (clojure.edn/read-string data)
+               data))
            (rest find-result))
       nil)))
 

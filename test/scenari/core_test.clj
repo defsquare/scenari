@@ -205,6 +205,21 @@ Then I receive a response with an id")
 
 (test/deftest params-from-steps-test
   (test/is (=
+             (params-from-steps #"When I create a new products \"(.*)\" \"(.*)\"" {:sentence   "When I create a new products \"toto\" \"123-456\""})
+             ["toto" "123-456"]))
+  (test/is (=
+             (params-from-steps #"When I create a new products \"(.*)\" \"(.*)\"" {:sentence   "When I create a new products \"toto\" \"{:foo :bar}\""})
+             ["toto" {:foo :bar}]))
+  (test/is (=
+             (params-from-steps #"When I create a new products \"(.*)\" \"(.*)\"" {:sentence   "When I create a new products \"toto\" \"[:foo :bar]\""})
+             ["toto" [:foo :bar]]))
+  (test/is (=
+             (params-from-steps #"When I create a new products \"(.*)\" \"(.*)\"" {:sentence   "When I create a new products \"toto\" \"(:foo :bar)\""})
+             ["toto" (list :foo :bar)]))
+  (test/is (=
+             (params-from-steps #"When I create a new products \"(.*)\" \"(.*)\"" {:sentence   "When I create a new products \"toto\" \"#{:foo :bar}\""})
+             ["toto" #{:foo :bar}]))
+  (test/is (=
              (params-from-steps #"When I create a new products \"(.*)\" \"(.*)\"" {:sentence   "When I create a new products \"toto\" \"coucou\""
                                                                                    :tab_params [{:product_name "iPhone 6" :product_desc "telephone"}]})
              ["toto" "coucou" [{:product_name "iPhone 6", :product_desc "telephone"}]]))
