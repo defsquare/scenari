@@ -1,25 +1,3 @@
-;The MIT License (MIT)
-;
-;Copyright (c) 2014 Jérémie Grodziski
-;
-;Permission is hereby granted, free of charge, to any person obtaining a copy
-;of this software and associated documentation files (the "Software"), to deal
-;in the Software without restriction, including without limitation the rights
-;to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-;copies of the Software, and to permit persons to whom the Software is
-;furnished to do so, subject to the following conditions:
-;
-;The above copyright notice and this permission notice shall be included in all
-;copies or substantial portions of the Software.
-;
-;THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-;AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-;OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-;SOFTWARE.
-;
 (ns scenari.core
   (:require [clojure.zip :as zip]
             [clojure.edn :only read-string]
@@ -64,7 +42,7 @@
    (kw-translations kw kw-translations-data)))
 
 (def gherkin-parser (insta/parser
-                      (str "SPEC = <whitespace?> <comment?> narrative? <whitespace?> <comment?> (scenario <eol?> <eol?>)*
+                      (str "SPEC = <whitespace?> <comment?> narrative? <whitespace?> <comment?> scenarios
            narrative          = <'Narrative:'|'Feature:'> <sentence>? <eol>? (as_a I_want_to in_order_to |
                                                                               as_a I_want_to so_that | in_order_to as_a I_want_to |
                                                                               as_a in_order_to I_want_to)?
@@ -72,6 +50,7 @@
            as_a               = <whitespace>? <'As a '> #'.*' <eol>
            I_want_to          = <whitespace>? <'I want to '> #'.*' <eol>
            so_that            = <whitespace>? <'So that '> #'.*' <eol>
+           scenarios          = (scenario <eol?> <eol?>)*
            <scenario_keyword> = " (kw-translations :scenario) "
            scenario           = <scenario_keyword> scenario_sentence <eol> steps examples?
            <comment>          = (comment_line whitespace?)*
@@ -86,7 +65,7 @@
            <space>            = ' '  | '\t'
            <eol>              = #'\r?\n'
            scenario_sentence  = #'.*'
-           step_sentence      = step_keywords #'.*' (<eol> tab_params)?
+           step_sentence      = step_keywords sentence (<eol> tab_params)?
            sentence           = #'[a-zA-Z0-9\"./\\_\\-\\':<>é@ ]+'
            examples           = <whitespace?> examples-keywords <eol> header row* <eol?>
            tab_params         = <whitespace?> header row* <eol?>
