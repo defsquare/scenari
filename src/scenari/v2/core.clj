@@ -11,6 +11,7 @@
 (def ^:dynamic *testing-vars* (list))
 (def ^:dynamic *tested-steps* nil)
 (def ^:dynamic *glues* {})
+(def initial-report {:executed-features 0 :feature-succeed 0 :feature-failed 0 :scenarios-succeed 0 :scenarios-failed 0})
 
 (defn inc-tested-steps [] (dosync (commute *tested-steps* inc)))
 
@@ -19,6 +20,8 @@
                                          (println (str "________________________"))
                                          (println (str "Feature : " (:feature m)))
                                          (println)))
+
+(defmethod t/report :feature-succeed [_] (t/inc-report-counter :feature-succeed))
 
 (defmethod t/report :end-feature [_] (t/with-test-out
                                        (println (str "________________________"))
@@ -50,6 +53,12 @@
 (defmethod t/report :missing-step [{:keys [step-sentence]}] (t/with-test-out
                                                               (println (utils/color-str :red "Missing step " step-sentence))
                                                               (println (utils/color-str :red (scenari/generate-step-fn {:sentence (get step-sentence :raw)})))))
+
+(defmethod t/report :features-summary [{:keys [executed-features scenarios-succeed scenarios-failed]}]
+  (t/with-test-out
+    (println "\nRan" executed-features "features containing"
+             (+ scenarios-succeed scenarios-failed) "scenarios.")
+    (println scenarios-succeed "success," scenarios-failed "fail.")))
 
 
 (defn matching-regex-fn
@@ -107,11 +116,22 @@
 (defn run-feature [feature]
   (when-let [{glues                            :glues
               {:keys [feature-name scenarios]} :gherkin} (meta feature)]
-    (binding [*testing-vars* (conj *testing-vars* feature)
+    (binding [t/*report-counters* (ref initial-report)
+              *testing-vars* (conj *testing-vars* feature)
               *glues* (merge *glues* (glues))]
       (t/do-report {:type :begin-feature, :feature feature-name})
       (run-scenarios scenarios)
-      (t/do-report {:type :end-feature}))))
+      (t/do-report {:type :end-feature})
+      @t/*report-counters*)))
+
+
+(defn run-features
+  ([] (apply run-features (filter #(some? (:gherkin (meta %))) (vals (ns-interns *ns*)))))
+  ([& features]
+   (let [reports (->> features
+                        (map run-feature)
+                        (apply merge-with +))]
+     (t/do-report (assoc reports :type :features-summary)))))
 
 (defn file-from-fs-or-classpath [x]
   (let [r (io/resource x)
@@ -183,7 +203,7 @@
                           ))
        (fn [] (run-feature (var ~name))))
 
-     (run-feature #'~(symbol (str (ns-name *ns*) "/" name)))
+     ;(run-feature #'~(symbol (str (ns-name *ns*) "/" name)))
      ))
 
 
@@ -208,7 +228,3 @@
           `{~regex# (fn ~params# (into [] [~@body#]))})))
 
   (steps-definition 'Given))
-
-
-(comment t/*report-counters*
-         (ref {:step_succeed 0, :test 0, :pass 0, :fail 0, :error 0}))

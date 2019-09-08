@@ -1,4 +1,4 @@
-(ns scenari.v2.core
+(ns scenari.v2.core-test
   (:require [clojure.test :as t :refer [is]]
             [scenari.v2.core :as v2]))
 
@@ -18,22 +18,29 @@ Scenario: other
 When I foo
 "
 
-            (defwhen #"I create a new product with name \"(.*)\" and description \"(.*)\"" [state arg0 arg1]
+            (v2/defwhen #"I create a new product with name \"(.*)\" and description \"(.*)\"" [state arg0 arg1]
                      (is (= 1 1))
                      {:foo "bar"})
 
-            (defthen #"I receive a response with an id 56422" [state]
+            (v2/defthen #"I receive a response with an id 56422" [state]
                      (do "assert the result of when step")
                      state)
 
-            (defthen #"a location URL" [state]
+            (v2/defthen #"a location URL" [state]
                      (do "assert the result of when step")
                      state)
 
-            (defwhen #"I invoke a GET request on location URL" [state]
+            (v2/defwhen #"I invoke a GET request on location URL" [state]
                      (is (= 1 1))
                      (assoc state :kix "lol"))
 
-            (defwhen #"I foo" [state]
+            (v2/defwhen #"I foo" [state]
                      (do "something")
                      state))
+
+(comment
+
+  (remove-ns 'scenari.v2.core-test)
+  (v2/run-features #'scenari.v2.core-test/my-feature)
+  (v2/run-features)
+  )
