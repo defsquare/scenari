@@ -48,10 +48,10 @@
 (defmethod t/report :scenario-failed [m] (t/with-test-out
                                            (t/inc-report-counter :scenarios-failed)
                                            (println (utils/color-str :red (:scenario m) " failed at step " (:executed-steps m) " of " (:total-steps m)))
-                                           (println)))
+                                           (println (utils/color-str :red (:ex m)))))
 
 (defmethod t/report :missing-step [{:keys [step-sentence]}] (t/with-test-out
-                                                              (println (utils/color-str :red "Missing step " step-sentence))
+                                                              (println (utils/color-str :red "Missing step for : " (get step-sentence :raw)))
                                                               (println (utils/color-str :red (scenari/generate-step-fn {:sentence (get step-sentence :raw)})))))
 
 (defmethod t/report :features-summary [{:keys [executed-features scenarios-succeed scenarios-failed]}]
@@ -65,21 +65,27 @@
   "return the tuple of fn/regex as a vector that match the step-sentence"
   [step glues]
   (let [{:keys [sentence]} step
-        matching-regexes (filter (fn [regex]
-                                   (not (empty? (re-find regex sentence))))
-                                 (map re-pattern (keys glues)))]
-    (if (> (count matching-regexes) 1)
-      (throw (RuntimeException. (str (count matching-regexes) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" (apply str matching-regexes)))))
-    (if (= (count matching-regexes) 0)
+        [matched-regex & conflicts] (filter (fn [regex]
+                                              (not (empty? (re-find regex sentence))))
+                                            (map re-pattern (keys glues)))]
+    (if (not-empty conflicts)
+      (throw (RuntimeException. (str (+ (count conflicts) 1) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" matched-regex "\n" (string/join "\n" conflicts)))))
+    (if (not matched-regex)
       (do (t/do-report {:type :missing-step, :step-sentence step})
           nil))
-    (apply concat (select-keys glues [(first matching-regexes)]))))
+    (apply concat (select-keys glues [matched-regex]))))
+
+(defn ->step-params [state step regex]
+  (let [params (scenari/params-from-steps regex step)
+        tab-params (get step :tab-params)]
+    (if tab-params
+      (cons state (conj params tab-params))
+      (cons state params))))
 
 (defn run-step [scenario-state step]
   (t/do-report {:type :begin-step, :step step})
   (let [[regex step-fn] (matching-regex-fn step *glues*)
-        params (scenari/params-from-steps regex step)
-        step-result (apply step-fn (cons scenario-state params))
+        step-result (apply step-fn (->step-params scenario-state  step regex))
         step-state (last step-result)
         any-fail? (some false? (drop-last step-result))]
     (when any-fail? (do
@@ -89,15 +95,15 @@
     step-state))
 
 (defn run-scenario
-  [scenario-state steps]
-  (when-let [step (first steps)]
+  [scenario-state [step & others]]
+  (when step
     (if-let [result (try
                       (run-step scenario-state step)
                       (catch Throwable e
                         {:ex e}))]
       (if (some? (:ex result))
         result
-        (recur result (rest steps))))))
+        (recur result others)))))
 
 (defn run-scenarios [scenarios]
   (when-let [{name :scenario-name steps :steps} (first scenarios)]
@@ -185,9 +191,11 @@
   (insta-trans/transform
     {:sentence          str
      :steps             (fn [& contents]
-                          {:steps (mapv (fn [[_ [step-key] sentence]] {:sentence-keyword step-key
-                                                                       :sentence         sentence
-                                                                       :raw              (str (string/capitalize (name step-key)) " " sentence)}) contents)})
+                          {:steps (mapv (fn [[_ [step-key] sentence tab-params]] (merge {:sentence-keyword step-key
+                                                                                         :sentence         sentence
+                                                                                         :raw              (str (string/capitalize (name step-key)) " " sentence)}
+                                                                                        (when-let [tp (not-empty (scenari/tab-params->map tab-params))]
+                                                                                          {:tab-params tp}))) contents)})
      :scenario_sentence (fn [a] {:scenario-name a})
      :scenario          (fn [& contents] (into {} contents))
      :scenarios         (fn [& contents] {:scenarios (into [] contents)})}
@@ -201,10 +209,7 @@
                (vary-meta assoc :glues `(fn [] (apply merge {} ~@glues)))
                (vary-meta assoc :gherkin (nth (->feature feature) 2) ;TODO refactor to clean feature data structure
                           ))
-       (fn [] (run-feature (var ~name))))
-
-     ;(run-feature #'~(symbol (str (ns-name *ns*) "/" name)))
-     ))
+       (fn [] (run-feature (var ~name))))))
 
 
 ;; TODO make a step evaluable as a standalone fun
