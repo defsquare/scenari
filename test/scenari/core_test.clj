@@ -233,6 +233,35 @@ Then I receive a response with an id")
              (params-from-steps #"When I create a new products" {:sentence "When I create a new products" :tab_params [{:product_name "iPhone 6" :product_desc "telephone"}]})
              [[{:product_name "iPhone 6", :product_desc "telephone"}]])))
 
+(def scenario-with-tab-params-containing-unicodes "
+Scenario: create a new product
+# this is a comment
+When I create a new products
+  | product_name  | product_desc              |
+  | iPhone 6      | téléphone                 |
+  | iPhone 6+     | bigger téléphone+-,'23454 |
+  | iPad          | tablet'                   |
+Then I receive a response with an id")
+
+(test/deftest scenario-parsing
+  (test/testing "tab params handle values containing unicode characters"
+    (test/is (= (gherkin-parser scenario-with-tab-params-containing-unicodes)
+                [:SPEC
+                 [:scenario
+                  [:scenario_sentence " create a new product"]
+                  [:steps
+                   [:step_sentence
+                    [:when]
+                    "I create a new products"
+                    [:tab_params
+                     [:header " product_name  " " product_desc              "]
+                     [:row " iPhone 6      " " téléphone                 "]
+                     [:row " iPhone 6+     " " bigger téléphone+-,'23454 "]
+                     [:row " iPad          " " tablet'                   "]]]
+                   [:step_sentence [:then] "I receive a response with an id"]]]]
+                ))))
+
+
 (test/deftest step-sentences-test
   (test/testing "with tabs params"
     (test/is (= (step-sentences [:steps
