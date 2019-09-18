@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file. This change
 
 # [Unreleased] #
 
+# [1.4.4] - 2019-09-18
+
+Add insta parse regex to handle unicode characters, numerics and punctuation
+https://github.com/jgrodziski/scenari/pull/8
+
 # [1.4.0] - 2019-05-17 #
 
 ## Added ##
