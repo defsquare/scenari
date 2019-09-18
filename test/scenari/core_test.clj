@@ -23,10 +23,10 @@ Then I receive a 200 response
 ")
 
 (gherkin-parser example-scenario-unique)
-(sentence-parser "When I create l'a new product with name 'iphone 6' \"test\"and description \"awesome phone\"")
-(sentence-parser "When I create l'a new product with name 'iphone 6' \"test\"and description \"awesome phone\" [123 \"test\"]")
-(sentence-parser "When I create a new product with name <name> and description ${description}")
-(sentence-parser "When I create a new product {:name \"iphone 6\" :description \"awesome phone\"}")
+(step-parser "When I create l'a new product with name 'iphone 6' \"test\"and description \"awesome phone\"")
+(step-parser "When I create l'a new product with name 'iphone 6' \"test\"and description \"awesome phone\" [123 \"test\"]")
+(step-parser "When I create a new product with name <name> and description ${description}")
+(step-parser "When I create a new product {:name \"iphone 6\" :description \"awesome phone\"}")
 
 (def example-scenario-multiple "
 Narrative:

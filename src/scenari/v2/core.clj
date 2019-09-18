@@ -4,161 +4,50 @@
             [scenari.utils :as utils]
             [instaparse.transform :as insta-trans]
             [clojure.java.io :as io]
-            [clojure.string :as string])
-  (:import (org.apache.commons.io FileUtils)))
+            [clojure.string :as string]
+            [clojure.tools.namespace.find :as ns-find])
+  (:import (org.apache.commons.io FileUtils)
+           (java.util UUID)))
 
 
-(def ^:dynamic *testing-vars* (list))
-(def ^:dynamic *tested-steps* nil)
-(def ^:dynamic *glues* {})
-(def initial-report {:executed-features 0 :feature-succeed 0 :feature-failed 0 :scenarios-succeed 0 :scenarios-failed 0})
-
-(defn inc-tested-steps [] (dosync (commute *tested-steps* inc)))
-
-(defmethod t/report :begin-feature [m] (t/with-test-out
-                                         (t/inc-report-counter :executed-features)
-                                         (println (str "________________________"))
-                                         (println (str "Feature : " (:feature m)))
-                                         (println)))
-
-(defmethod t/report :feature-succeed [_] (t/inc-report-counter :feature-succeed))
-
-(defmethod t/report :end-feature [_] (t/with-test-out
-                                       (println (str "________________________"))
-                                       (println)))
-
-(defmethod t/report :begin-scenario [m] (t/with-test-out
-                                          (t/inc-report-counter :executed-scenarios)
-                                          (println (str "Testing scenario : " (:scenario m)))))
-
-(defmethod t/report :begin-step [m] (t/with-test-out (println " " (-> m :step :sentence-keyword name) (-> m :step :sentence name))))
-
-(defmethod t/report :step-succeed [m] (t/with-test-out
-                                        (inc-tested-steps)
-                                        (println (str "      =====> " (:state m)))))
-
-(defmethod t/report :step-failed [m] (t/with-test-out
-                                       (println (utils/color-str :red "Step failed"))))
-
-(defmethod t/report :scenario-succeed [m] (t/with-test-out
-                                            (t/inc-report-counter :scenarios-succeed)
-                                            (println (utils/color-str :green (:scenario m) " succeed !"))
-                                            (println)))
-
-(defmethod t/report :scenario-failed [m] (t/with-test-out
-                                           (t/inc-report-counter :scenarios-failed)
-                                           (println (utils/color-str :red (:scenario m) " failed at step " (:executed-steps m) " of " (:total-steps m)))
-                                           (println (utils/color-str :red (:ex m)))))
-
-(defmethod t/report :missing-step [{:keys [step-sentence]}] (t/with-test-out
-                                                              (println (utils/color-str :red "Missing step for : " (get step-sentence :raw)))
-                                                              (println (utils/color-str :red (scenari/generate-step-fn {:sentence (get step-sentence :raw)})))))
-
-(defmethod t/report :features-summary [{:keys [executed-features scenarios-succeed scenarios-failed]}]
-  (t/with-test-out
-    (println "\nRan" executed-features "features containing"
-             (+ scenarios-succeed scenarios-failed) "scenarios.")
-    (println scenarios-succeed "success," scenarios-failed "fail.")))
-
+;; ------------------------
+;;          LOAD
+;; ------------------------
+(defn all-glues []
+  (->> (all-ns)
+       (mapcat #(vals (ns-publics %)))
+       (map #(assoc (meta %) :ref %))
+       (filter #(contains? % :step))))
 
 (defn matching-regex-fn
   "return the tuple of fn/regex as a vector that match the step-sentence"
-  [step glues]
+  [step]
   (let [{:keys [sentence]} step
-        [matched-regex & conflicts] (filter (fn [regex]
-                                              (not (empty? (re-find regex sentence))))
-                                            (map re-pattern (keys glues)))]
+        glues (all-glues)
+        [matched-glue & conflicts] (filter (fn [{:keys [step]}]
+                                             (not (empty? (re-find step sentence))))
+                                           glues)]
     (if (not-empty conflicts)
-      (throw (RuntimeException. (str (+ (count conflicts) 1) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" matched-regex "\n" (string/join "\n" conflicts)))))
-    (if (not matched-regex)
+      (throw (RuntimeException. (str (+ (count conflicts) 1) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" matched-glue "\n" (string/join "\n" conflicts)))))
+    (if (not matched-glue)
       (do (t/do-report {:type :missing-step, :step-sentence step})
           nil))
-    (apply concat (select-keys glues [matched-regex]))))
+    matched-glue))
 
-(defn ->step-params [state step regex]
-  (let [params (scenari/params-from-steps regex step)
-        tab-params (get step :tab-params)]
-    (if tab-params
-      (cons state (conj params tab-params))
-      (cons state params))))
+(defn tab-params->params [tab-params]
+  (when tab-params
+    (let [[_ [_ & headers] & rows] tab-params
+          param-names (map (comp keyword string/trim) headers)
+          params-values (map (comp #(map string/trim %) rest) rows)]
+      [{:type :table :val (mapv #(apply hash-map (interleave param-names %)) params-values)}])))
 
-(defn run-step [scenario-state step]
-  (t/do-report {:type :begin-step, :step step})
-  (let [[regex step-fn] (matching-regex-fn step *glues*)
-        step-result (apply step-fn (->step-params scenario-state  step regex))
-        step-state (last step-result)
-        any-fail? (some false? (drop-last step-result))]
-    (when any-fail? (do
-                      (t/do-report {:type :step-failed})
-                      (throw (Exception. "step fail"))))
-    (t/do-report {:type :step-succeed, :state step-state})
-    step-state))
-
-(defn run-scenario
-  [scenario-state [step & others]]
-  (when step
-    (if-let [result (try
-                      (run-step scenario-state step)
-                      (catch Throwable e
-                        {:ex e}))]
-      (if (some? (:ex result))
-        result
-        (recur result others)))))
-
-(defn run-scenarios [scenarios]
-  (when-let [{name :scenario-name steps :steps} (first scenarios)]
-    (t/do-report {:type :begin-scenario, :scenario name})
-    (binding [*tested-steps* (ref 0)]
-      (let [scenario-result (run-scenario {} steps)]
-        (if (:ex scenario-result)
-          (t/do-report {:type           :scenario-failed
-                        :ex             (:ex scenario-result)
-                        :scenario       name
-                        :executed-steps @*tested-steps*
-                        :total-steps    (count steps)})
-          (t/do-report {:type :scenario-succeed :scenario name}))))
-    (recur (rest scenarios))))
-
-(defn run-feature [feature]
-  (when-let [{glues                            :glues
-              {:keys [feature-name scenarios]} :gherkin} (meta feature)]
-    (binding [t/*report-counters* (ref initial-report)
-              *testing-vars* (conj *testing-vars* feature)
-              *glues* (merge *glues* (glues))]
-      (t/do-report {:type :begin-feature, :feature feature-name})
-      (run-scenarios scenarios)
-      (t/do-report {:type :end-feature})
-      @t/*report-counters*)))
-
-
-(defn run-features
-  ([] (apply run-features (filter #(some? (:gherkin (meta %))) (vals (ns-interns *ns*)))))
-  ([& features]
-   (let [reports (->> features
-                        (map run-feature)
-                        (apply merge-with +))]
-     (t/do-report (assoc reports :type :features-summary)))))
+(defn sentence-params->params [[_ val]] {:type :value :val val})
 
 (defn file-from-fs-or-classpath [x]
   (let [r (io/resource x)
         f (when (and (instance? java.io.File x) (.exists x)) x)
         f-str (when (and (instance? String x) (.exists (io/as-file x))) x)]
     (io/as-file (or r f f-str))))
-
-(defmulti ->feature
-          "Read the spec and execute each step with the code setup by the defgiven, defwhen and defthen macro"
-          (fn [spec]
-            (letfn [(file-or-dir [x]
-                      (cond (.isFile x) :file
-                            (.isDirectory x) :dir))]
-              (if (instance? String spec)
-                (if-let [f (file-from-fs-or-classpath spec)]
-                  (file-or-dir f)
-                  :feature-as-str)
-                (if (instance? java.io.File spec)
-                  (file-or-dir spec)
-                  (throw (RuntimeException. (str "type " (type spec) "for spec not accepted (only string or file)")))))))
-          :default :file)
 
 (defn get-feature-files [basedir]
   (letfn [(find-spec-files [basedir]
@@ -173,63 +62,151 @@
                                  (throw (RuntimeException. (str basedir " doesn't exists in path: " (java.lang.System/getProperty "user.dir")))))
       "class java.io.File" (find-spec-files basedir))))
 
-
-(defmethod ->feature
-  :dir
-  [feature]
-  (doseq [spec-file (get-feature-files feature)]
-    (->feature spec-file)))
-
-(defmethod ->feature
-  :file
-  [feature]
-  (->feature (slurp (file-from-fs-or-classpath feature))))
-
-(defmethod ->feature
-  :feature-as-str
-  [feature]
+(defn find-sentence-params [sentence]
   (insta-trans/transform
-    {:sentence          str
+    {:SENTENCE (fn [& s] (->> (rest s)
+                              (filter (fn [[type _]] (= type :string)))
+                              (mapv sentence-params->params)))}
+    (scenari/sentence-parser sentence)))
+
+(defmulti read-source
+          (fn [path]
+            (letfn [(file-or-dir [x]
+                      (cond (.isFile x) :file
+                            (.isDirectory x) :dir))]
+              (if (instance? String path)
+                (if-let [f (file-from-fs-or-classpath path)]
+                  (file-or-dir f)
+                  :feature-as-str)
+                (if (instance? java.io.File path)
+                  (file-or-dir path)
+                  (throw (RuntimeException. (str "type " (type path) "for spec not accepted (only string or file)")))))))
+          :default :file)
+
+(defmethod read-source
+  :dir
+  [path]
+  (doseq [spec-file (get-feature-files path)]
+    (read-source spec-file)))
+
+(defmethod read-source
+  :file
+  [path-or-source]
+  (read-source (slurp (file-from-fs-or-classpath path-or-source))))
+
+(defmethod read-source :feature-as-str [source] source)
+
+(defn ->feature-ast [source]
+  (insta-trans/transform
+    {:SPEC              (fn [& s] (apply merge s))
+     :narrative         (fn [& n] {:feature n})
+     :sentence          str
      :steps             (fn [& contents]
-                          {:steps (mapv (fn [[_ [step-key] sentence tab-params]] (merge {:sentence-keyword step-key
-                                                                                         :sentence         sentence
-                                                                                         :raw              (str (string/capitalize (name step-key)) " " sentence)}
-                                                                                        (when-let [tp (not-empty (scenari/tab-params->map tab-params))]
-                                                                                          {:tab-params tp}))) contents)})
+                          {:steps (vec (map-indexed (fn [i [_ [step-key] sentence tab-params]]
+                                                      (let [step (merge {:sentence-keyword step-key
+                                                                         :sentence         sentence
+                                                                         :raw              (str (string/capitalize (name step-key)) " " sentence)}
+                                                                        (when-let [params (into (find-sentence-params sentence)
+                                                                                                (tab-params->params tab-params))]
+                                                                          {:params params}))]
+                                                        (-> step
+                                                            (assoc :order i)
+                                                            (assoc :glue (matching-regex-fn step)))))
+                                                    contents))})
      :scenario_sentence (fn [a] {:scenario-name a})
-     :scenario          (fn [& contents] (into {} contents))
+     :scenario          (fn [& contents] (into {:id (.toString (UUID/randomUUID))} contents))
      :scenarios         (fn [& contents] {:scenarios (into [] contents)})}
-    (scenari/gherkin-parser feature)))
+    (scenari/gherkin-parser source)))
+
+;; ------------------------
+;;          RUN
+;; ------------------------
+
+(defn run-step [step scenario-state]
+  (let [f (get-in step [:glue :ref])
+        params (cons scenario-state (mapv :val (get step :params)))]
+    (try (let [result (apply f params)
+               state (last result)
+               any-fail? (some false? (drop-last result))]
+           (-> step
+               (assoc :input-state scenario-state)
+               (assoc :output-state state)
+               (assoc :status (if any-fail? :fail :success))))
+         (catch Throwable e
+           (-> step
+               (assoc :input-state scenario-state)
+               (assoc :exception e)
+               (assoc :status :fail))))))
+
+(defn run-steps [steps state [step & others]]
+  (if-not step
+    steps
+    (let [{:keys [output-state status] :as step-result} (run-step step state)
+          steps (map #(if (= (:order step-result) (:order %)) step-result %) steps)]
+      (if (= status :fail)
+        steps
+        (recur steps output-state others)))))
+
+(defn run-scenario [scenario]
+  (let [pending-steps (map #(assoc % :status :pending) (:steps scenario))
+        result-steps (run-steps pending-steps {} pending-steps)]
+    (-> scenario
+        (assoc :steps result-steps)
+        (assoc :status (if (contains? (set (map :status result-steps)) :fail) :fail :success)))))
+
+(defn run-scenarios [scenarios [scenario & others]]
+  (if-not scenario
+    scenarios
+    (let [scenario-result (run-scenario scenario)
+          scenarios (map #(if (= (:id %) (:id scenario)) scenario-result %) scenarios)]
+      (recur scenarios others))))
+
+(defn run-feature [feature]
+  (let [feature-ast (get (meta feature) :feature-ast)
+        scenarios (run-scenarios (:scenarios feature-ast) (:scenarios feature-ast))]
+    (-> feature-ast
+        (assoc :scenarios scenarios)
+        (assoc :status (if (contains? (set (map :status scenarios)) :fail) :fail :success)))))
+
+(defn run-features [& features]
+  (map run-feature features))
 
 
-(defmacro deffeature [name feature & glues]
-  `(do
-     (ns-unmap *ns* '~name)
-     (def ~(-> name
-               (vary-meta assoc :glues `(fn [] (apply merge {} ~@glues)))
-               (vary-meta assoc :gherkin (nth (->feature feature) 2) ;TODO refactor to clean feature data structure
-                          ))
-       (fn [] (run-feature (var ~name))))))
+;; ------------------------
+;;          DEFINE
+;; ------------------------
+(defmacro deffeature [name feature]
+  (let [source# (read-source feature)
+        feature-ast# `(->feature-ast ~source#)]
+    `(do
+       (ns-unmap *ns* '~name)
+       (def ~(-> name
+                 (vary-meta assoc :source source#)
+                 (vary-meta assoc :feature-ast feature-ast#))
+         (fn [] (run-feature (var ~name))))
+       ~feature-ast#)))
 
+
+(defn re->symbol [re]
+  (-> (str re)
+      (string/replace #"\\\"\(\.\*\)\\\"" "param")
+      (string/replace #" " "-")
+      symbol))
 
 ;; TODO make a step evaluable as a standalone fun
 ;; TODO duplication, should be resolve with a macro
 (defmacro defgiven [regex params & body]
-  `{~regex (fn ~params (into [] [~@body]))})
+  `(defn ~(-> (re->symbol regex)
+              (vary-meta assoc :step regex)) ~params (into [] [~@body])))
 
 (defmacro defand [regex params & body]
-  `{~regex (fn ~params (into [] [~@body]))})
+  `(defn ~(-> (re->symbol regex)
+              (vary-meta assoc :step regex)) ~params (into [] [~@body])))
 
 (defmacro defwhen [regex params & body]
-  `{~regex (fn ~params (into [] [~@body]))})
+  `(defn ~(-> (re->symbol regex)
+              (vary-meta assoc :step regex)) ~params (into [] [~@body])))
 
 (defmacro defthen [regex params & body]
-  `{~regex (fn ~params (into [] [~@body]))})
-
-(comment
-  (defmacro steps-definition [& names]
-    `(doseq [name# ~names]
-       `(defmacro ~name# [regex# params# & body#]
-          `{~regex# (fn ~params# (into [] [~@body#]))})))
-
-  (steps-definition 'Given))
+  `(defn ~(-> (re->symbol regex)
+              (vary-meta assoc :step regex)) ~params (into [] [~@body])))

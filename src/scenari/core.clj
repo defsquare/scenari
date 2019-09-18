@@ -42,7 +42,8 @@
    (kw-translations kw kw-translations-data)))
 
 (def gherkin-parser (insta/parser
-                      (str "SPEC = <whitespace?> <comment?> narrative? <whitespace?> <comment?> scenarios
+                      (str "
+           SPEC = <whitespace?> <comment?> narrative? <whitespace?> <comment?> scenarios
            narrative          = <'Narrative:'|'Feature:'> <sentence>? <eol>? (as_a I_want_to in_order_to |
                                                                               as_a I_want_to so_that | in_order_to as_a I_want_to |
                                                                               as_a in_order_to I_want_to)?
@@ -102,8 +103,24 @@
                        whitespace    = #'\\s+'
                        eol           = #'\r?\n'"))
 
+;; TODO use combinator !
 (def sentence-parser (insta/parser
-                       (str "SENTENCE         = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
+                       (str "SENTENCE             = <whitespace?> (words | data_group | parameter)* <eol>?
+                             words            = #'[a-zA-Z0-9./\\_\\-\\'èéêàûù ]+'
+                             <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
+                             parameter        = <'<'> parameter_name <'>'> | <'${'> parameter_name <'}'>
+                             string           = <'\"'> #'[a-zA-ZáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ0-9\\-:,./ ]+' <'\"'>
+                             <data_group>     = string | map | vector
+                             map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
+                             elements         = (#'\".+\"|[0-9]+' <whitespace>?)*
+                             vector           = <'['> elements <']'>
+                             <whitespace>     = #'\\s+'
+                             <value>          = #'[a-zA-Z0-9+ ]*'
+                             whitespace       = #'\\s+'
+                             eol              = #'\r?\n'")))
+
+(def step-parser (insta/parser
+                       (str "STEP             = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
                              given            = <" (kw-translations :given) ">
                              when             = <" (kw-translations :when) ">
                              then             = <" (kw-translations :then) ">
@@ -146,7 +163,7 @@
   "return a string representing a spexec macro call corresponding to the sentence step"
   [step-sentence]
   (let [{:keys [sentence tab_params]} step-sentence
-        sentence-ast (sentence-parser sentence)
+        sentence-ast (step-parser sentence)
         [_ [step-type] & sentence-elements] sentence-ast
         sentence-elements (if tab_params (conj (vec sentence-elements) [:tab_params []]) sentence-elements)]
     (if (insta/failure? sentence-ast)
