@@ -23,10 +23,10 @@ This library was previously named "Spexec" (https://github.com/zenmodeler/spexec
 
 ```clojure
 ;;add this dependency to your project.clj file
-[scenari "1.4.2"]
+[scenari "1.4.4"]
 ;;or deps.edn
 {
-scenari {:mvn/version "1.4.2"}
+scenari {:mvn/version "1.4.4"}
 }
 ;;then in your ns statement
 (:require [scenari.core :as scenari :refer [defgiven defwhen defthen run-scenarios]])
