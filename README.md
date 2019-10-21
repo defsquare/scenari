@@ -167,7 +167,7 @@ Macros are here for convenience, plain-old function are also available, you have
 ```
 
 ### Chaining steps
-Steps often produce side effect or retrieve some stuffs (fn, data) to be used in the next ones, you can store your state in your code or in the scenario itself, but I think an easier mechanism is to think of the steps like a chain and pass a data structure from the return of a step to the input of the next one (very similar to [ring handlers](https://github.com/ring-clojure/ring/wiki/Concepts) or chain of responsibility for instance). So, each step functio's return is taken as the input for the next step as the first argument (you can name it _ if you don't need it). A good practice would be to use a map or vector and then destructure it as the first param of the next step, like :
+Steps often produce side effect or retrieve some stuffs (fn, data) to be used in the next ones, you can store your state in your code or in the scenario itself, but I think an easier mechanism is to think of the steps like a chain and pass a data structure from the return of a step to the input of the next one (very similar to [ring handlers](https://github.com/ring-clojure/ring/wiki/Concepts) or chain of responsibility for instance). So, each step function's return is taken as the input for the next step as the first argument (you can name it `_` if you don't need it). A good practice would be to use a map or vector and then destructure it as the first param of the next step, like :
 
 ```clojure
 (defwhen #"my sentence to be matched with (.*) and (.*)" 
