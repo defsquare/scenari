@@ -78,3 +78,21 @@
                                   :purple "35" :cyan   "36" :white "37"
                                   "0"))]
     (str (ansi-color color) (apply str xs) (ansi-color :reset))))
+
+(def digits-only? (re-pattern #"^[0-9.]*$"))
+
+(defn number-value-of
+  "given a string, detect if it contains digits only, then convert to a long or Double, otherwise return the string unchanged"
+  [s]
+  ;;first a regex to detect if the string contains digits only
+  (let [re-number? (re-find digits-only? s)]
+    ;;then try to cast the string to a number going from the largest type to the shortest one
+    (if re-number?
+      (try
+        (Long/valueOf s)
+        (catch java.lang.NumberFormatException nfe
+          (try
+            (Double/valueOf s)
+            (catch java.lang.NumberFormatException nfe
+              s))))
+      s)))

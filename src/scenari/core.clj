@@ -29,7 +29,7 @@
             [clojure.test :refer [deftest testing]]
             [clojure.string :as string]
             [instaparse.core :as insta]
-            [scenari.utils :as utils :refer [get-in-tree color-str]])
+            [scenari.utils :as utils :refer [get-in-tree color-str number-value-of]])
    (:import org.apache.commons.io.FileUtils
             org.apache.commons.io.filefilter.RegexFileFilter))
 
@@ -330,7 +330,12 @@
                                    (not (empty? (re-find regex sentence))))
                                  (map re-pattern (keys @regexes-to-fns)))]
     (if (> (count matching-regexes) 1)
-      (throw (RuntimeException. (str (count matching-regexes) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" (apply str matching-regexes)))))
+      (throw (RuntimeException. (format "%d regexes were found that match the following step sentence:\n %s, please refine your regexes:\n%s"
+                                        (count matching-regexes)
+                                        sentence
+                                        (->> matching-regexes
+                                             (interpose "\n")
+                                             (apply str))))))
     (if (= (count matching-regexes) 0)
       (do (print-fn-skeleton step-sentence)
           nil))
@@ -342,7 +347,7 @@
       (map (fn [data]
              (if (contains? #{\( \{ \# \[} (first data))
                (clojure.edn/read-string data)
-               data))
+               (number-value-of data)))
            (rest find-result))
       nil)))
 
@@ -363,7 +368,7 @@
   [example]
   (vals example))
 
-(defn- execute-fn-for-step [step-sentence fn prev-return params]
+(defn- execute-fn-for-step [step-sentence fn prev-result data]
   ;;(trace "regex and fn " regex fn)
   (if (not (nil? fn))
     ;; fn found with a regex that match the sentence
@@ -372,12 +377,18 @@
     ;; so if you want to accumulate the results, just provide a coll and conj on it
     (let [result
           (try
-            (apply fn prev-return params)
-            (catch java.lang.Exception e {:failure true :message (.getMessage e)}))
+            (testing step-sentence
+              (apply fn prev-result data))
+            (catch java.lang.Exception e {:failure true
+                                          :message (.getMessage e)
+                                          :fn fn
+                                          ;:snippet (format "(%s %s %s)" (str #'fn) (str prev-result) (apply str (interpose " " data)))
+                                          :state prev-result
+                                          :args data}))
           ]
       (with-pprint-dispatch scenari-pprint-dispatch (pprint step-sentence))
       (with-pprint-dispatch scenari-pprint-dispatch (pprint (str "=> " result)))
-      (trace "executed fn " fn " with " prev-return " and " params ", result => " result)
+      (trace "executed fn " fn " with " prev-result " and " data ", result => " result)
       result)
     (do (print-fn-skeleton step-sentence)
         nil)))
@@ -398,12 +409,12 @@
       (println " ")
       (if-let [example (first examples)]
         (do (loop [step-sentences step-sentences
-                   prev-return nil
+                   prev-result nil
                    scenario-acc [:scenario (scenario-sentence scenario-ast)]]
               (if-let [{:keys [sentence] :as step-sentence} (first step-sentences)]
                 (let [[fn regex] (matching-fn step-sentence)
                       data (data-from-example example)
-                      result (execute-fn-for-step step-sentence fn prev-return data)]
+                      result (execute-fn-for-step step-sentence fn prev-result data)]
                   (recur (rest step-sentences)
                          result
                          (conj scenario-acc [sentence result])))))

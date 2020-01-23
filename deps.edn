@@ -3,20 +3,20 @@
  :mvn/repos {"central" {:url "https://repo1.maven.org/maven2/"}
              "clojars" {:url "https://repo.clojars.org/"}}
 
- :deps {org.clojure/clojure       {:mvn/version "1.10.0"}
+ :deps {org.clojure/clojure       {:mvn/version "1.10.1"}
         org.clojure/tools.logging {:mvn/version "0.4.1"}
         clojure.java-time         {:mvn/version "0.3.2"}
         instaparse                {:mvn/version "1.4.10"}
         commons-io/commons-io     {:mvn/version "2.6"}
         }
 
- :aliases {:artifact-name {:extra-deps {metav {:mvn/version "LATEST"}}
+ :aliases {:artifact-name {:extra-deps {metav {:mvn/version "1.6.1"}}
                            :main-opts  ["-m" "metav.display"]}
-           :release       {:extra-deps {metav {:mvn/version "LATEST"}}
+           :release       {:extra-deps {metav {:mvn/version "1.6.1"}}
                            :main-opts  ["-m" "metav.release"]}
            :dev           {}
            :build {:extra-deps {luchiniatwork/cambada {:git/url "https://github.com/xfthhxk/cambada.git"
-                                                       :sha     "8fdc7d29a41620ad3e9e6210fd7140f3a4c7936b"}}
+                                                       :sha     "c8a01477c856fc28c53f34aa3f268f8eaf683869"}}
                    :main-opts ["-m" "cambada.jar"]}
 
            :test          {:extra-paths ["test"]
