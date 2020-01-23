@@ -23,10 +23,10 @@ This library was previously named "Spexec" (https://github.com/zenmodeler/spexec
 
 ```clojure
 ;;add this dependency to your project.clj file
-[scenari "1.4.4"]
+[scenari "1.5.0"]
 ;;or deps.edn
 {
-scenari {:mvn/version "1.4.4"}
+scenari {:mvn/version "1.5.0"}
 }
 ;;then in your ns statement
 (:require [scenari.core :as scenari :refer [defgiven defwhen defthen run-scenarios]])
@@ -222,7 +222,7 @@ I did a presentation of the internals of the library at the Clojure Paris User G
 
 Scenari is released under the terms of the [MIT License](http://opensource.org/licenses/MIT).
 
-Copyright © 2019 Jérémie Grodziski jeremie@grodziski.com
+Copyright © 2020 Jérémie Grodziski jeremie@grodziski.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
