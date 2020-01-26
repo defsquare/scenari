@@ -17,5 +17,4 @@
 
 (v2/defwhen #"I invoke a GET request on location URL" [state]
             (is (= 1 1))
-            (println "coucou")
             (assoc state :kix "lol"))

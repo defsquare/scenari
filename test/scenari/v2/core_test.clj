@@ -6,11 +6,16 @@
             [kaocha.repl :as krepl]
             [scenari.v2.glue]))
 
+(def side-effect-atom (atom 0))
 
 (v2/defwhen #"I foo" [state]
+            (is (= 1 @side-effect-atom))
             state)
 
-(v2/deffeature my-feature "test/scenari/v2/example.feature")
+(defn init-side-effect [] (reset! side-effect-atom 1))
+
+(v2/deffeature my-feature "test/scenari/v2/example.feature"
+               {:pre-run [#'init-side-effect]})
 
 
 (comment

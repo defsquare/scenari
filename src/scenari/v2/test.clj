@@ -56,8 +56,11 @@
     (println scenarios-succeed "success," scenarios-failed "fail.")))
 
 (defn run-feature [feature]
-  (when-let [{{:keys [feature-name scenarios]} :feature-ast} (meta feature)]
-    (binding [*feature-succeed* (atom true)]
+  (when-let [{{:keys [feature-name scenarios pre-run]} :feature-ast} (meta feature)]
+    (doseq [{pre-run-fn :ref} pre-run]
+      (pre-run-fn))
+    (binding [t/*report-counters* (ref t/*initial-report-counters*)
+              *feature-succeed* (atom true)]
       (t/do-report {:type :begin-feature, :feature feature-name})
       (doseq [scenario scenarios]
         (t/do-report {:type :begin-scenario, :scenario (:name name)})
@@ -87,6 +90,7 @@
   ([& features]
    (let [reports (->> features
                       (map run-feature)
-                      (apply merge-with +))]
+                      (apply merge-with +)
+                      )]
      (t/do-report (assoc reports :type :features-summary))
      reports)))

@@ -99,7 +99,7 @@
 
 (defmethod read-source :feature-as-str [source] source)
 
-(defn ->feature-ast [source]
+(defn ->feature-ast [source hooks]
   (insta-trans/transform
     {:SPEC              (fn [& s] (apply merge s))
      :narrative         (fn [& n] {:feature n})
@@ -118,7 +118,9 @@
                                                     contents))})
      :scenario_sentence (fn [a] {:scenario-name a})
      :scenario          (fn [& contents] (into {:id (.toString (UUID/randomUUID))} contents))
-     :scenarios         (fn [& contents] {:scenarios (into [] contents)})}
+     :scenarios         (fn [& contents] {:scenarios (into [] contents)
+                                          :pre-run   (map #(assoc (meta %) :ref %) (:pre-run hooks))
+                                          })}
     (scenari/gherkin-parser source)))
 
 ;; ------------------------
@@ -165,11 +167,13 @@
       (recur scenarios others))))
 
 (defn run-feature [feature]
-  (let [feature-ast (get (meta feature) :feature-ast)
-        scenarios (run-scenarios (:scenarios feature-ast) (:scenarios feature-ast))]
-    (-> feature-ast
-        (assoc :scenarios scenarios)
-        (assoc :status (if (contains? (set (map :status scenarios)) :fail) :fail :success)))))
+  (let [{:keys [scenarios pre-run] :as feature-ast} (get (meta feature) :feature-ast)]
+    (doseq [{pre-run-fn :ref} pre-run]
+      (pre-run-fn))
+    (let [scenarios (run-scenarios scenarios scenarios)]
+      (-> feature-ast
+          (assoc :scenarios scenarios)
+          (assoc :status (if (contains? (set (map :status scenarios)) :fail) :fail :success))))))
 
 (defn run-features
   ([] (apply run-features (filter #(some? (:feature-ast (meta %))) (vals (ns-interns *ns*)))))
@@ -179,15 +183,15 @@
 ;; ------------------------
 ;;          DEFINE
 ;; ------------------------
-(defmacro deffeature [name feature]
+(defmacro deffeature [name feature & [hooks]]
   (let [source# (read-source feature)
-        feature-ast# `(->feature-ast ~source#)]
+        feature-ast# `(->feature-ast ~source# ~hooks)]
     `(do
        (ns-unmap *ns* '~name)
        (t/deftest ~(-> name
-                      (vary-meta assoc :source source#)
-                      (vary-meta assoc :feature-ast feature-ast#)) []
-                                      (scenari.v2.test/run-features (var ~name))) ;;TODO circular dependency...
+                       (vary-meta assoc :source source#)
+                       (vary-meta assoc :feature-ast feature-ast#)) []
+                                                                    (scenari.v2.test/run-features (var ~name))) ;;TODO circular dependency...
        ~feature-ast#)))
 
 

@@ -68,15 +68,17 @@
    ::testable/desc (:scenario-name scenario)
    ::feature       (keyword (path->id (str (:project-directory document) (:file document))))
    ::file          (str (:project-directory document) (:file document))
-   :steps         (:steps scenario)
+   :steps          (:steps scenario)
    })
 
 (defn feature->testable [testable document]
-  (let [feature-meta (first (find-feature-in-dirs (::glue-paths testable) (:source document)))] ;TODO handle exception when multiple deffeature match
+  (let [feature-meta (first (find-feature-in-dirs (::glue-paths testable) (:source document))) ;TODO handle exception when multiple deffeature match
+        {{:keys [scenarios pre-run]} :feature-ast} feature-meta]
     {::testable/type         :kaocha.type/scenari-feature
      ::testable/id           (keyword (path->id (str (:project-directory document) (:file document))))
      ::testable/desc         " "                            ;; TODO fix instaparse to capture feature description
-     :kaocha.test-plan/tests (mapv #(scenario->testable document %) (get-in feature-meta [:feature-ast :scenarios]))}))
+     :kaocha.test-plan/tests (mapv #(scenario->testable document %) scenarios)
+     ::pre-run               pre-run}))
 
 (defmethod testable/-load :kaocha.type/scenari [testable]
   (let [documents (paths->documents (:kaocha/test-paths testable))]
@@ -94,6 +96,8 @@
 
 (defmethod testable/-run :kaocha.type/scenari-feature [testable test-plan]
   (t/do-report {:type ::begin-feature})
+  (doseq [{pre-run-fn :ref} (::pre-run testable)]
+    (pre-run-fn))
   (let [results (testable/run-testables (:kaocha.test-plan/tests testable) test-plan)
         testable (-> testable
                      (dissoc :kaocha.test-plan/tests)
@@ -103,9 +107,7 @@
 
 (defmethod testable/-run :kaocha.type/scenari-scenario [testable test-plan]
   (t/do-report {:type ::begin-scenario})
-  (let [_ (t/with-test-out "result " testable)
-        testable (sc/run-scenario testable)
-        _ (t/with-test-out "result " testable)]
+  (let [testable (sc/run-scenario testable)]
     (t/do-report {:type ::end-scenario})
     (-> testable
         (merge {:kaocha.result/count 1
