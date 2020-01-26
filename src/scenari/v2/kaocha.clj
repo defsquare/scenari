@@ -103,7 +103,9 @@
 
 (defmethod testable/-run :kaocha.type/scenari-scenario [testable test-plan]
   (t/do-report {:type ::begin-scenario})
-  (let [testable (sc/run-scenario testable)]
+  (let [_ (t/with-test-out "result " testable)
+        testable (sc/run-scenario testable)
+        _ (t/with-test-out "result " testable)]
     (t/do-report {:type ::end-scenario})
     (-> testable
         (merge {:kaocha.result/count 1
@@ -183,101 +185,4 @@
 
            "})
 
-
-  (def test-plan '{:kaocha.plugin.randomize/seed 325097226,
-                   :kaocha.plugin.randomize/randomize? true,
-                   :kaocha/reporter [kaocha.report/dots],
-                   :kaocha/color? true,
-                   :kaocha/fail-fast? false,
-                   :kaocha/plugins [:kaocha.plugin/randomize :kaocha.plugin/filter :kaocha.plugin/capture-output],
-                   :kaocha.plugin.capture-output/capture-output? true,
-                   :kaocha.test-plan/tests ({:kaocha.test-plan/tests ({:kaocha.testable/type :kaocha.type/scenari-feature,
-                                                                       :kaocha.testable/id :test.scenari.v2.example,
-                                                                       :kaocha.testable/desc " ",
-                                                                       :kaocha.test-plan/tests ({:kaocha.testable/type :kaocha.type/scenari-scenario,
-                                                                                                 :kaocha.testable/id :another,
-                                                                                                 :kaocha.testable/desc " ",
-                                                                                                 :scenari.v2.kaocha/feature :test.scenari.v2.example,
-                                                                                                 :scenari.v2.kaocha/file "test/scenari/v2/example.feature",
-                                                                                                 :scenari.v2.kaocha/steps [{:sentence-keyword :given,
-                                                                                                                            :sentence "I foo",
-                                                                                                                            :raw "Given I foo",
-                                                                                                                            :params [],
-                                                                                                                            :glue {:step #"I foo",
-                                                                                                                                   :arglists ([state]),
-                                                                                                                                   :line 22,
-                                                                                                                                   :column 1,
-                                                                                                                                   :file "/private/var/folders/9t/zskvyk6d4_x6zjjtnr0216t00000gn/T/form-init9426947062815088430.clj",
-                                                                                                                                   :name I-foo,
-                                                                                                                                   :ref #'scenari.v2.core-test/I-foo}}],
-                                                                                                 :kaocha.plugin.randomize/sort-key -662722445}
-                                                                                                {:kaocha.testable/type :kaocha.type/scenari-scenario,
-                                                                                                 :kaocha.testable/id :create-a-new-product,
-                                                                                                 :kaocha.testable/desc " ",
-                                                                                                 :scenari.v2.kaocha/feature :test.scenari.v2.example,
-                                                                                                 :scenari.v2.kaocha/file "test/scenari/v2/example.feature",
-                                                                                                 :scenari.v2.kaocha/steps [{:sentence-keyword :when,
-                                                                                                                            :sentence "I invoke a GET request on location URL",
-                                                                                                                            :raw "When I invoke a GET request on location URL",
-                                                                                                                            :params [],
-                                                                                                                            :glue {:step #"I invoke a GET request on location URL",
-                                                                                                                                   :arglists ([state]),
-                                                                                                                                   :line 18,
-                                                                                                                                   :column 1,
-                                                                                                                                   :file "/private/var/folders/9t/zskvyk6d4_x6zjjtnr0216t00000gn/T/form-init9426947062815088430.clj",
-                                                                                                                                   :name I-invoke-a-GET-request-on-location-URL,
-                                                                                                                                   :ref #'scenari.v2.core-test/I-invoke-a-GET-request-on-location-URL}}
-                                                                                                                           {:sentence-keyword :when,
-                                                                                                                            :sentence "I create a new product with name \"iphone 6\" and description \"awesome phone\" with properties",
-                                                                                                                            :raw "When I create a new product with name \"iphone 6\" and description \"awesome phone\" with properties",
-                                                                                                                            :params [{:type :value,
-                                                                                                                                      :val "iphone 6"}
-                                                                                                                                     {:type :value,
-                                                                                                                                      :val "awesome phone"}
-                                                                                                                                     {:type :table,
-                                                                                                                                      :val [{:size "6",
-                                                                                                                                             :weight "2"}]}],
-                                                                                                                            :glue {:step #"I create a new product with name \"(.*)\" and description \"(.*)\" with properties",
-                                                                                                                                   :arglists ([state
-                                                                                                                                               arg0
-                                                                                                                                               arg1
-                                                                                                                                               arg2]),
-                                                                                                                                   :line 6,
-                                                                                                                                   :column 1,
-                                                                                                                                   :file "/private/var/folders/9t/zskvyk6d4_x6zjjtnr0216t00000gn/T/form-init9426947062815088430.clj",
-                                                                                                                                   :name I-create-a-new-product-with-name-param-and-description-param-with-properties,
-                                                                                                                                   :ref #'scenari.v2.core-test/I-create-a-new-product-with-name-param-and-description-param-with-properties}}
-                                                                                                                           {:sentence-keyword :then,
-                                                                                                                            :sentence "I receive a response with an id 56422",
-                                                                                                                            :raw "Then I receive a response with an id 56422",
-                                                                                                                            :params [],
-                                                                                                                            :glue {:step #"I receive a response with an id 56422",
-                                                                                                                                   :arglists ([state]),
-                                                                                                                                   :line 10,
-                                                                                                                                   :column 1,
-                                                                                                                                   :file "/private/var/folders/9t/zskvyk6d4_x6zjjtnr0216t00000gn/T/form-init9426947062815088430.clj",
-                                                                                                                                   :name I-receive-a-response-with-an-id-56422,
-                                                                                                                                   :ref #'scenari.v2.core-test/I-receive-a-response-with-an-id-56422}}
-                                                                                                                           {:sentence-keyword :then,
-                                                                                                                            :sentence "a location URL",
-                                                                                                                            :raw "Then a location URL",
-                                                                                                                            :params [],
-                                                                                                                            :glue {:step #"a location URL",
-                                                                                                                                   :arglists ([state]),
-                                                                                                                                   :line 14,
-                                                                                                                                   :column 1,
-                                                                                                                                   :file "/private/var/folders/9t/zskvyk6d4_x6zjjtnr0216t00000gn/T/form-init9426947062815088430.clj",
-                                                                                                                                   :name a-location-URL,
-                                                                                                                                   :ref #'scenari.v2.core-test/a-location-URL}}],
-                                                                                                 :kaocha.plugin.randomize/sort-key 692688609}),
-                                                                       :kaocha.plugin.randomize/sort-key 2062569942}),
-                                             :kaocha.plugin.randomize/sort-key -1208512606,
-                                             :kaocha/test-paths ["test/scenari/v2"],
-                                             :kaocha/ns-patterns ["-test$"],
-                                             :kaocha.filter/skip-meta [:kaocha/skip],
-                                             :kaocha.testable/type :kaocha.type/scenari,
-                                             :kaocha/source-paths ["src"],
-                                             :kaocha.testable/desc "scenario (scenari)",
-                                             :kaocha.testable/id :scenario,
-                                             :scenari.v2.kaocha/glue-paths ["test/scenari/v2"]})})
   )

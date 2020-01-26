@@ -105,7 +105,7 @@
 
 ;; TODO use combinator !
 (def sentence-parser (insta/parser
-                       (str "SENTENCE             = <whitespace?> (words | data_group | parameter)* <eol>?
+                       (str "SENTENCE         = <whitespace>? (words | data_group | parameter)* <eol>?
                              words            = #'[a-zA-Z0-9./\\_\\-\\'èéêàûù ]+'
                              <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
                              parameter        = <'<'> parameter_name <'>'> | <'${'> parameter_name <'}'>

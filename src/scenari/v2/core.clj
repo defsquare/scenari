@@ -64,10 +64,13 @@
 
 (defn find-sentence-params [sentence]
   (insta-trans/transform
-    {:SENTENCE (fn [& s] (->> (rest s)
+    {:SENTENCE (fn [& s] (->> s
                               (filter (fn [[type _]] (= type :string)))
                               (mapv sentence-params->params)))}
     (scenari/sentence-parser sentence)))
+
+(comment
+  (find-sentence-params "\"Bob Carter\" de l'organisation \"ElectreNG\""))
 
 (defmulti read-source
           (fn [path]
@@ -168,8 +171,9 @@
         (assoc :scenarios scenarios)
         (assoc :status (if (contains? (set (map :status scenarios)) :fail) :fail :success)))))
 
-(defn run-features [& features]
-  (map run-feature features))
+(defn run-features
+  ([] (apply run-features (filter #(some? (:feature-ast (meta %))) (vals (ns-interns *ns*)))))
+  ([& features] (map run-feature features)))
 
 
 ;; ------------------------
@@ -180,10 +184,10 @@
         feature-ast# `(->feature-ast ~source#)]
     `(do
        (ns-unmap *ns* '~name)
-       (def ~(-> name
-                 (vary-meta assoc :source source#)
-                 (vary-meta assoc :feature-ast feature-ast#))
-         (fn [] (run-feature (var ~name))))
+       (t/deftest ~(-> name
+                      (vary-meta assoc :source source#)
+                      (vary-meta assoc :feature-ast feature-ast#)) []
+                                      (scenari.v2.test/run-features (var ~name))) ;;TODO circular dependency...
        ~feature-ast#)))
 
 

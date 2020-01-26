@@ -4,7 +4,6 @@
             [scenari.utils :as utils]))
 
 (def ^:dynamic *feature-succeed* nil)
-(def initial-report {:executed-features 0 :feature-succeed 0 :feature-failed 0 :scenarios-succeed 0 :scenarios-failed 0})
 
 (defmethod t/report :begin-feature [m] (t/with-test-out
                                          (t/inc-report-counter :executed-features)
@@ -22,7 +21,7 @@
 
 (defmethod t/report :begin-scenario [m] (t/with-test-out
                                           (t/inc-report-counter :executed-scenarios)
-                                          (println (str "Testing scenario : " (:scenario m)))))
+                                          (println (str "Testing scenario : " (:scenario-name m)))))
 
 (defmethod t/report :begin-step [m] (t/with-test-out (println " " (-> m :step :sentence-keyword name) (-> m :step :sentence name))))
 
@@ -33,12 +32,14 @@
                                        (println (utils/color-str :red "Step failed"))))
 
 (defmethod t/report :scenario-succeed [m] (t/with-test-out
+                                            (t/inc-report-counter :pass)
                                             (t/inc-report-counter :scenarios-succeed)
                                             (println (utils/color-str :green (:scenario m) " succeed !"))
                                             (println)))
 
 (defmethod t/report :scenario-failed [m] (t/with-test-out
                                            (reset! *feature-succeed* false)
+                                           (t/inc-report-counter :fail)
                                            (t/inc-report-counter :scenarios-failed)
                                            (println (utils/color-str :red (:scenario m) " failed at step " (:executed-steps m) " of " (:total-steps m)))
                                            (println (utils/color-str :red (:ex m)))))
@@ -47,7 +48,8 @@
                                                               (println (utils/color-str :red "Missing step for : " (get step-sentence :raw)))
                                                               (println (utils/color-str :red (scenari/generate-step-fn {:sentence (get step-sentence :raw)})))))
 
-(defmethod t/report :features-summary [{:keys [executed-features scenarios-succeed scenarios-failed]}]
+(defmethod t/report :features-summary [{:keys [executed-features scenarios-succeed scenarios-failed]
+                                        :or {scenarios-succeed 0 scenarios-failed 0}}]
   (t/with-test-out
     (println "\nRan" executed-features "features containing"
              (+ scenarios-succeed scenarios-failed) "scenarios.")
@@ -55,8 +57,7 @@
 
 (defn run-feature [feature]
   (when-let [{{:keys [feature-name scenarios]} :feature-ast} (meta feature)]
-    (binding [t/*report-counters* (ref initial-report)
-              *feature-succeed* (atom true)]
+    (binding [*feature-succeed* (atom true)]
       (t/do-report {:type :begin-feature, :feature feature-name})
       (doseq [scenario scenarios]
         (t/do-report {:type :begin-scenario, :scenario (:name name)})
