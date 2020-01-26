@@ -64,7 +64,9 @@
       (t/do-report {:type :begin-feature, :feature feature-name})
       (doseq [scenario scenarios]
         (t/do-report {:type :begin-scenario, :scenario (:name name)})
-        (let [scenario-result (loop [state {}
+        (let [_ (doseq [{pre-run-fn :ref} (:pre-run scenario)]
+                  (pre-run-fn))
+              scenario-result (loop [state {}
                                      [step & others] (:steps scenario)]
                                 (if-not step
                                   true
@@ -77,7 +79,9 @@
                                           false)
                                         (do
                                           (t/do-report {:type :step-succeed, :state (:output-state step-result)})
-                                          (recur (:output-state step-result) others)))))))]
+                                          (recur (:output-state step-result) others)))))))
+              _ (doseq [{post-run-fn :ref} (:pre-run scenario)]
+                  (post-run-fn))]
           (if scenario-result
             (t/do-report {:type :scenario-succeed, :scenario (:scenario-name scenario)})
             (t/do-report {:type     :scenario-failed

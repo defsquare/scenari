@@ -117,10 +117,12 @@
                                                             (assoc :glue (matching-regex-fn step)))))
                                                     contents))})
      :scenario_sentence (fn [a] {:scenario-name a})
-     :scenario          (fn [& contents] (into {:id (.toString (UUID/randomUUID))} contents))
+     :scenario          (fn [& contents] (into {:id (.toString (UUID/randomUUID))
+                                                :pre-run (map #(assoc (meta %) :ref %) (:pre-scenario-run hooks))
+                                                :post-run (map #(assoc (meta %) :ref %) (:post-scenario-run hooks))}
+                                               contents))
      :scenarios         (fn [& contents] {:scenarios (into [] contents)
-                                          :pre-run   (map #(assoc (meta %) :ref %) (:pre-run hooks))
-                                          })}
+                                          :pre-run   (map #(assoc (meta %) :ref %) (:pre-run hooks))})}
     (scenari/gherkin-parser source)))
 
 ;; ------------------------
@@ -154,7 +156,11 @@
 
 (defn run-scenario [scenario]
   (let [pending-steps (map #(assoc % :status :pending) (:steps scenario))
-        result-steps (run-steps pending-steps {} pending-steps)]
+        _ (doseq [{pre-run-fn :ref} (:pre-run scenario)]
+            (pre-run-fn))
+        result-steps (run-steps pending-steps {} pending-steps)
+        _ (doseq [{post-run-fn :ref} (:post-run scenario)]
+            (post-run-fn))]
     (-> scenario
         (assoc :steps result-steps)
         (assoc :status (if (contains? (set (map :status result-steps)) :fail) :fail :success)))))
