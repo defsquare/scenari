@@ -2,9 +2,9 @@
   (:require [clojure.test :as t :refer [is]]
             [scenari.v2.core :as v2]
             [scenari.v2.test :as sc-test]
-            [scenari.v2.kaocha]
-            [kaocha.repl :as krepl]
-            [scenari.v2.glue]))
+            [kaocha.type.scenari]
+            [scenari.v2.glue]
+            [kaocha.repl :as krepl]))
 
 (def side-effect-atom (atom 0))
 (def scenario-side-effect-atom (atom 0))

@@ -1,13 +1,13 @@
-(ns scenari.v2.kaocha
-  (:require [kaocha.testable :as testable]
-            [clojure.spec.alpha :as s]
-            [kaocha.hierarchy :as hierarchy]
+(ns kaocha.type.scenari
+  (:require [clojure.test :as t]
             [clojure.string :as str]
             [clojure.java.io :as io]
+            [clojure.spec.alpha :as s]
+            [clojure.tools.namespace.find :as ns-find]
+            [kaocha.testable :as testable]
+            [kaocha.hierarchy :as hierarchy]
             [kaocha.repl :as krepl]
             [scenari.v2.core :as v2]
-            [clojure.tools.namespace.find :as ns-find]
-            [clojure.test :as t]
             [scenari.v2.core :as sc]))
 
 (s/def :kaocha.type/scenari (s/keys :req [:kaocha/source-paths
@@ -21,12 +21,6 @@
        (filter #(= (:source %) source))
        ))
 
-(comment
-  (def steps (->> (all-ns)
-                  (mapcat #(vals (ns-publics %)))
-                  (map #(assoc (meta %) :ref %))
-                  (filter #(contains? % :step))))
-  )
 (defn find-feature-in-dirs [paths source]
   (mapcat #(find-feature-in-dir % source) paths))
 
@@ -80,7 +74,14 @@
      :kaocha.test-plan/tests (mapv #(scenario->testable document %) scenarios)
      ::pre-run               pre-run}))
 
+(defn- require-all-ns [paths]
+  (->> paths
+       (map io/file)
+       (mapcat ns-find/find-namespaces-in-dir)
+       (apply require)))
+
 (defmethod testable/-load :kaocha.type/scenari [testable]
+  (require-all-ns (concat (:kaocha/test-paths testable) (::glue-paths testable)))
   (let [documents (paths->documents (:kaocha/test-paths testable))]
     (-> testable
         (assoc :kaocha.test-plan/tests (mapv #(feature->testable testable %) documents)))))
@@ -147,8 +148,8 @@
 
 
 (comment
+  (in-ns 'kaocha.type.scenari)
   (krepl/run :scenario)
-
   (krepl/run :unit)
 
   (krepl/run {:config-file "tests.edn"})
