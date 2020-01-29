@@ -23,7 +23,11 @@
                                           (t/inc-report-counter :executed-scenarios)
                                           (println (str "Testing scenario : " (:scenario-name m)))))
 
-(defmethod t/report :begin-step [m] (t/with-test-out (println " " (-> m :step :sentence-keyword name) (-> m :step :sentence name))))
+(defmethod t/report :begin-step [m] (t/with-test-out
+                                      (let [{{:keys            [raw]
+                                              {glue-regex :step
+                                               glue-ns    :ns} :glue} :step} m]
+                                        (println " " raw "         " (utils/color-str :grey (str "(from " glue-ns "/#\"" glue-regex "\")"))))))
 
 (defmethod t/report :step-succeed [m] (t/with-test-out
                                         (println (str "      =====> " (:state m)))))
