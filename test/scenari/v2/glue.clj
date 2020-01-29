@@ -18,3 +18,13 @@
 (v2/defwhen #"I invoke a GET request on location URL" [state]
             (is (= 1 1))
             (assoc state :kix "lol"))
+
+(v2/defwhen #"I foo" [state]
+            state)
+
+
+(v2/defgiven #"My duplicated step in other ns and feature ns" [state]
+             state)
+
+(v2/defgiven #"My duplicated step in others ns" [state]
+             state)

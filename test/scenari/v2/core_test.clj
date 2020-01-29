@@ -4,7 +4,8 @@
             [scenari.v2.test :as sc-test]
             [kaocha.type.scenari]
             [scenari.v2.glue]
-            [kaocha.repl :as krepl]))
+            [kaocha.repl :as krepl]
+            [clojure.string :as string]))
 
 (def side-effect-atom (atom 0))
 (def scenario-side-effect-atom (atom 0))
@@ -22,6 +23,19 @@
                {:pre-run [#'init-side-effect]
                 :pre-scenario-run [#'pre-scenario-run-side-effect]
                 :post-scenario-run [#'post-scenario-run-side-effect]})
+
+(v2/defgiven #"My duplicated step in other ns and feature ns" [state]
+             state)
+
+(t/deftest duplicate-glues-test
+  (require 'scenari.v2.glue)
+  (require 'scenari.v2.other-glue.glue)
+  (t/testing "Should take the step located in ns of feature"
+    (t/is (= (:ns (v2/find-glue-by-step-regex {:sentence "My duplicated step in other ns and feature ns"} *ns*)) *ns*)))
+  (t/testing "Should fail when step both located in others ns as same level"
+    (t/is (= (try (v2/find-glue-by-step-regex {:sentence "My duplicated step in others ns"} *ns*)
+                  (catch Exception _ false))
+             false))))
 
 (comment
   (remove-ns 'scenari.v2.core-test)

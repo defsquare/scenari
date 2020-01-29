@@ -19,20 +19,38 @@
        (map #(assoc (meta %) :ref %))
        (filter #(contains? % :step))))
 
-(defn matching-regex-fn
+(defn ns-proximity-score [ns-glue ns-feature]
+  (loop [[ns-glue & child-ns-glue] (string/split ns-glue #"\.")
+         [ns-feature & child-ns-feature] (string/split ns-feature #"\.")
+         score 0]
+    (if (or (not ns-feature) (not ns-glue) (not= ns-glue ns-feature))
+      score
+      (recur child-ns-glue child-ns-feature (inc score)))))
+
+(defn find-closest-glues-by-ns [matched-glues ns-feature]
+  (let [[score closest-glues-by-ns] (->> matched-glues
+                                            (map #(hash-map (ns-proximity-score (str ns-feature) (str (:ns %))) [%]))
+                                            (apply merge-with into)
+                                            (apply max-key key))]
+    closest-glues-by-ns))
+
+
+(defn find-glue-by-step-regex
   "return the tuple of fn/regex as a vector that match the step-sentence"
-  [step]
+  [step ns-feature]
   (let [{:keys [sentence]} step
         glues (all-glues)
-        [matched-glue & conflicts] (filter (fn [{:keys [step]}]
-                                             (not (empty? (re-find step sentence))))
-                                           glues)]
-    (if (not-empty conflicts)
-      (throw (RuntimeException. (str (+ (count conflicts) 1) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" matched-glue "\n" (string/join "\n" conflicts)))))
-    (if (not matched-glue)
+        matched-glues (filter #(seq (re-find (:step %) sentence)) glues)]
+    (cond
+      (empty? matched-glues)
       (do (t/do-report {:type :missing-step, :step-sentence step})
-          nil))
-    matched-glue))
+          nil)
+      (> (count matched-glues) 1)
+      (let [[matched-glue & conflicts] (find-closest-glues-by-ns matched-glues ns-feature)]
+        (if conflicts
+          (throw (RuntimeException. (str (+ (count conflicts) 1) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" matched-glue "\n" (string/join "\n" conflicts))))
+          matched-glue))
+      :else (first matched-glues))))
 
 (defn tab-params->params [tab-params]
   (when tab-params
@@ -99,7 +117,7 @@
 
 (defmethod read-source :feature-as-str [source] source)
 
-(defn ->feature-ast [source hooks]
+(defn ->feature-ast [source hooks ns-feature]
   (insta-trans/transform
     {:SPEC              (fn [& s] (apply merge s))
      :narrative         (fn [& n] {:feature n})
@@ -114,7 +132,7 @@
                                                                           {:params params}))]
                                                         (-> step
                                                             (assoc :order i)
-                                                            (assoc :glue (matching-regex-fn step)))))
+                                                            (assoc :glue (find-glue-by-step-regex step ns-feature)))))
                                                     contents))})
      :scenario_sentence (fn [a] {:scenario-name a})
      :scenario          (fn [& contents] (into {:id (.toString (UUID/randomUUID))
@@ -191,7 +209,7 @@
 ;; ------------------------
 (defmacro deffeature [name feature & [hooks]]
   (let [source# (read-source feature)
-        feature-ast# `(->feature-ast ~source# ~hooks)]
+        feature-ast# `(->feature-ast ~source# ~hooks *ns*)]
     `(do
        (ns-unmap *ns* '~name)
        (t/deftest ~(-> name
