@@ -19,9 +19,6 @@
             (is (= 1 1))
             (assoc state :kix "lol"))
 
-(v2/defwhen #"I foo" [state]
-            state)
-
 
 (v2/defgiven #"My duplicated step in other ns and feature ns" [state]
              state)

@@ -16,8 +16,8 @@
             state)
 
 (defn init-side-effect [] (reset! side-effect-atom 1))
-(defn pre-scenario-run-side-effect [] (reset! scenario-side-effect-atom 1))
-(defn post-scenario-run-side-effect [] (reset! scenario-side-effect-atom 0))
+(defn pre-scenario-run-side-effect [] (reset! scenario-side-effect-atom 1) )
+(defn post-scenario-run-side-effect [] (reset! scenario-side-effect-atom 1))
 
 (v2/deffeature my-feature "test/scenari/v2/example.feature"
                {:pre-run [#'init-side-effect]

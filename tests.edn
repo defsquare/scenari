@@ -3,5 +3,7 @@
                         :type                           :kaocha.type/scenari
                         :kaocha/source-paths            ["src"]
                         :kaocha/test-paths              ["test/scenari/v2"]
-                        :kaocha.type.scenari/glue-paths ["test/scenari/v2"]}]
+                        :kaocha.type.scenari/glue-paths ["scenari/v2"]
+                        :kaocha.type.scenari/feature-paths ["scenari/v2"]}
+                       ]
      :kaocha/reporter kaocha.report/documentation}

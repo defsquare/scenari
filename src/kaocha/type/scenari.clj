@@ -8,34 +8,34 @@
             [kaocha.hierarchy :as hierarchy]
             [kaocha.repl :as krepl]
             [scenari.v2.core :as v2]
-            [scenari.v2.core :as sc]))
+            [scenari.v2.core :as sc])
+  (:import (org.apache.commons.io FileUtils)))
 
 (s/def :kaocha.type/scenari (s/keys :req [:kaocha/source-paths
                                           :kaocha/test-paths]))
 
 (defn find-feature-in-dir [path source]
-  (->> (io/file path)
-       ns-find/find-namespaces-in-dir
-       (map #(ns-publics (symbol %)))
-       (mapcat #(map meta (vals %)))
-       (filter #(= (:source %) source))
-       ))
+  (->>
+    (io/resource path)
+    io/file
+    ns-find/find-namespaces-in-dir
+    (map #(ns-publics (symbol %)))
+    (mapcat #(map meta (vals %)))
+    (filter #(= (:source %) source))
+    ))
 
 (defn find-feature-in-dirs [paths source]
   (mapcat #(find-feature-in-dir % source) paths))
 
 (defn paths->documents [paths]
-  (let [project-path (.getCanonicalPath (clojure.java.io/file "."))]
-    (->> paths
-         (map (fn [path] (str project-path "/" path)))
-         (mapcat (fn [path] (.listFiles (io/file path))))
-         (filter (fn [f] (str/ends-with? (.getName f) ".feature")))
-         (map (fn [feature-path] {:path              (.getPath feature-path)
-                                  :project-directory (-> (.getPath feature-path)
-                                                         (str/replace (str project-path "/") "")
-                                                         (str/replace (.getName feature-path) ""))
-                                  :file              (.getName feature-path)
-                                  :source            (slurp feature-path)})))))
+  (->> paths
+       (map io/resource)
+       (map io/file)
+       (mapcat #(FileUtils/listFiles % (into-array ["story" "feature"]) true))
+       (filter #(str/ends-with? (.getName %) ".feature"))
+       (map (fn [feature-path] {:path   (.getPath feature-path)
+                                :file   (.getName feature-path)
+                                :source (slurp feature-path)}))))
 
 (defn path->id [path]
   (-> path
@@ -57,13 +57,13 @@
       (str/replace #" " "-")))
 
 (defn scenario->testable [document scenario]
-  {::testable/type :kaocha.type/scenari-scenario
-   ::testable/id   (keyword (scenario->id scenario))
-   ::testable/desc (:scenario-name scenario)
-   ::feature       (keyword (path->id (str (:project-directory document) (:file document))))
-   ::file          (str (:project-directory document) (:file document))
-   :steps          (:steps scenario)
-   })
+  (merge scenario
+         {::testable/type :kaocha.type/scenari-scenario
+          ::testable/id   (keyword (scenario->id scenario))
+          ::testable/desc (:scenario-name scenario)
+          ::feature       (keyword (path->id (str (:project-directory document) (:file document))))
+          ::file          (str (:project-directory document) (:file document))
+          }))
 
 (defn feature->testable [testable document]
   (let [feature-meta (first (find-feature-in-dirs (::glue-paths testable) (:source document))) ;TODO handle exception when multiple deffeature match
@@ -76,17 +76,16 @@
 
 (defn- require-all-ns [paths]
   (->> paths
+       (map io/resource)
        (map io/file)
        (mapcat ns-find/find-namespaces-in-dir)
        (apply require)))
 
 (defmethod testable/-load :kaocha.type/scenari [testable]
-  (require-all-ns (concat (:kaocha/test-paths testable) (::glue-paths testable)))
-  (let [documents (paths->documents (:kaocha/test-paths testable))]
+  (require-all-ns (::glue-paths testable))
+  (let [documents (paths->documents (::feature-paths testable))]
     (-> testable
         (assoc :kaocha.test-plan/tests (mapv #(feature->testable testable %) documents)))))
-
-
 
 (defmethod testable/-run :kaocha.type/scenari [testable test-plan]
   (let [results (testable/run-testables (:kaocha.test-plan/tests testable) test-plan)
@@ -123,6 +122,7 @@
     testable))
 
 (s/def ::glue-paths (s/coll-of string?))
+(s/def ::feature-paths (s/coll-of string?))
 
 (s/def :kaocha.type/scenari (s/keys :req [:kaocha/source-paths
                                           :kaocha/test-paths
