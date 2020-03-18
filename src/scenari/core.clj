@@ -67,7 +67,7 @@
            <eol>              = #'\r?\n'
            scenario_sentence  = #'.*'
            step_sentence      = step_keywords sentence (<eol> tab_params)?
-           sentence           = #'[a-zA-Z0-9\"./\\_\\-\\':<>é@ ]+'
+           sentence           = #'[a-zA-Z0-9\"./\\_\\-\\':<>é@ \\{\\}\\[\\]]+'
            examples           = <whitespace?> examples-keywords <eol> header row* <eol?>
            tab_params         = <whitespace?> header row* <eol?>
            <examples-keywords>= <" (kw-translations :examples) ">
@@ -111,9 +111,8 @@
                              parameter        = <'<'> parameter_name <'>'> | <'${'> parameter_name <'}'>
                              string           = <'\"'> #'[a-zA-ZáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ0-9\\-:,./ ]+' <'\"'>
                              <data_group>     = string | map | vector
-                             map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
-                             elements         = (#'\".+\"|[0-9]+' <whitespace>?)*
-                             vector           = <'['> elements <']'>
+                             map              = #'\\{[a-zA-Z0-9\\-:,./\\\" \\{\\}\\[\\]]+\\}'
+                             vector           = #'\\[[a-zA-Z0-9\\-:,./\\\" \\{\\}\\[\\]]+\\]'
                              <whitespace>     = #'\\s+'
                              <value>          = #'[a-zA-Z0-9+ ]*'
                              whitespace       = #'\\s+'

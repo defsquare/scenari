@@ -59,7 +59,11 @@
           params-values (map (comp #(map string/trim %) rest) rows)]
       [{:type :table :val (mapv #(apply hash-map (interleave param-names %)) params-values)}])))
 
-(defn sentence-params->params [[_ val]] {:type :value :val val})
+(defn sentence-params->params [[type val]]
+  (case type
+    :string {:type :value :val val}
+    :map {:type :value :val (read-string val)}
+    :vector {:type :value :val (read-string val)}))
 
 (defn file-from-fs-or-classpath [x]
   (let [r (io/resource x)
@@ -82,9 +86,12 @@
 
 (defn find-sentence-params [sentence]
   (insta-trans/transform
-    {:SENTENCE (fn [& s] (->> s
-                              (filter (fn [[type _]] (= type :string)))
-                              (mapv sentence-params->params)))}
+    {:SENTENCE (fn [& s]
+                 (->> s
+                      (filter (fn [[type _]] (or (= type :string)
+                                                 (= type :map)
+                                                 (= type :vector))))
+                      (mapv sentence-params->params)))}
     (scenari/sentence-parser sentence)))
 
 (comment
