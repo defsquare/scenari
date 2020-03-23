@@ -33,7 +33,8 @@
                                         (println (str "      =====> " (:state m)))))
 
 (defmethod t/report :step-failed [m] (t/with-test-out
-                                       (println (utils/color-str :red "Step failed"))))
+                                       (println (utils/color-str :red "Step failed"))
+                                       (some->> (:exception m) clojure.stacktrace/print-stack-trace)))
 
 (defmethod t/report :scenario-succeed [m] (t/with-test-out
                                             (t/inc-report-counter :pass)

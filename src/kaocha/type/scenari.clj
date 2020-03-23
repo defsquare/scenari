@@ -8,7 +8,8 @@
             [kaocha.hierarchy :as hierarchy]
             [kaocha.repl :as krepl]
             [scenari.v2.core :as v2]
-            [scenari.v2.core :as sc])
+            [scenari.v2.core :as sc]
+            [scenari.v2.test])
   (:import (org.apache.commons.io FileUtils)))
 
 (s/def :kaocha.type/scenari (s/keys :req [:kaocha/source-paths
@@ -106,9 +107,16 @@
     testable))
 
 (defmethod testable/-run :kaocha.type/scenari-scenario [testable test-plan]
-  (t/do-report {:type ::begin-scenario})
+  (t/do-report {:type :begin-scenario :scenario-name (:scenario-name testable)})
   (let [testable (sc/run-scenario testable)]
-    (t/do-report {:type ::end-scenario})
+    (doseq [step (:steps testable)]
+      (condp = (:status step)
+            :success (t/do-report {:type :begin-step :step step})
+            :fail (do
+                    (t/do-report {:type :begin-step :step step})
+                    (t/do-report {:type :step-failed :exception (:exception step)}))
+            :pending nil
+            nil))
     (-> testable
         (merge {:kaocha.result/count 1
                 :kaocha.result/pass  (if (= (:status testable) :success) 1 0)
@@ -139,8 +147,6 @@
 
 (hierarchy/derive! ::begin-scenario :kaocha/begin-test)
 (hierarchy/derive! ::end-scenario :kaocha/end-test)
-
-;(hierarchy/derive! :scenari/snippets-suggested :kaocha/deferred)
 
 (hierarchy/derive! :kaocha.type/scenari :kaocha.testable.type/suite)
 (hierarchy/derive! :kaocha.type/scenari-feature :kaocha.testable.type/group)
