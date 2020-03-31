@@ -5,24 +5,28 @@
             [kaocha.type.scenari]
             [scenari.v2.glue]
             [kaocha.repl :as krepl]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [testit.core :refer :all]))
 
 (def side-effect-atom (atom 0))
 (def scenario-side-effect-atom (atom 0))
 
 (v2/defwhen #"I foo" [state]
-            (is (= 1 @scenario-side-effect-atom))
-            (is (= 1 @side-effect-atom))
-            state)
+            (let [scenario-side-effect @scenario-side-effect-atom
+                  side-effect-atom @side-effect-atom]
+              (fact 1 => scenario-side-effect)
+              (fact 1 => side-effect-atom)
+              state))
 
 (defn init-side-effect [] (reset! side-effect-atom 1))
-(defn pre-scenario-run-side-effect [] (reset! scenario-side-effect-atom 1) )
+(defn pre-scenario-run-side-effect [] (reset! scenario-side-effect-atom 1))
 (defn post-scenario-run-side-effect [] (reset! scenario-side-effect-atom 1))
 
 (v2/deffeature my-feature "test/scenari/v2/example.feature"
-               {:pre-run [#'init-side-effect]
-                :pre-scenario-run [#'pre-scenario-run-side-effect]
-                :post-scenario-run [#'post-scenario-run-side-effect]})
+               {:pre-run           [#'init-side-effect]
+                :pre-scenario-run  [#'pre-scenario-run-side-effect]
+                :post-scenario-run [#'post-scenario-run-side-effect]
+                :post-run          [#'init-side-effect]})
 
 (v2/defgiven #"My duplicated step in other ns and feature ns" [state]
              state)

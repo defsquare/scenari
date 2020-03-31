@@ -149,20 +149,21 @@
 ;; ------------------------
 
 (defn run-step [step scenario-state]
-  (let [f (get-in step [:glue :ref])
-        params (cons scenario-state (mapv :val (get step :params)))]
-    (try (let [result (apply f params)
-               state (last result)
-               any-fail? (some false? (drop-last result))]
-           (-> step
-               (assoc :input-state scenario-state)
-               (assoc :output-state state)
-               (assoc :status (if any-fail? :fail :success))))
-         (catch Throwable e
-           (-> step
-               (assoc :input-state scenario-state)
-               (assoc :exception e)
-               (assoc :status :fail))))))
+  (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)]
+    (let [f (get-in step [:glue :ref])
+          params (cons scenario-state (mapv :val (get step :params)))]
+      (try (let [result (apply f params)
+                 state (last result)
+                 any-fail? (> (:fail (deref clojure.test/*report-counters*)) 0)]
+             (-> step
+                 (assoc :input-state scenario-state)
+                 (assoc :output-state state)
+                 (assoc :status (if any-fail? :fail :success))))
+           (catch Throwable e
+             (-> step
+                 (assoc :input-state scenario-state)
+                 (assoc :exception e)
+                 (assoc :status :fail)))))))
 
 (defn run-steps [steps state [step & others]]
   (if-not step
