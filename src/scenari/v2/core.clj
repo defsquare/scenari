@@ -40,7 +40,7 @@
   [step ns-feature]
   (let [{:keys [sentence]} step
         glues (all-glues)
-        matched-glues (filter #(seq (re-find (:step %) sentence)) glues)]
+        matched-glues (filter #(seq (re-matches (:step %) sentence)) glues)]
     (cond
       (empty? matched-glues)
       (do (t/do-report {:type :missing-step, :step-sentence step})
@@ -49,7 +49,8 @@
       (let [[matched-glue & conflicts] (find-closest-glues-by-ns matched-glues ns-feature)]
         (if conflicts
           (throw (RuntimeException. (str (+ (count conflicts) 1) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" matched-glue "\n" (string/join "\n" conflicts))))
-          matched-glue))
+          (assoc matched-glue
+                 :warning (str (count matched-glues) " matching functions were found for this step sentence"))))
       :else (first matched-glues))))
 
 (defn tab-params->params [tab-params]

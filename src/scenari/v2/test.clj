@@ -25,9 +25,13 @@
 
 (defmethod t/report :begin-step [m] (t/with-test-out
                                       (let [{{:keys            [raw]
-                                              {glue-regex :step
-                                               glue-ns    :ns} :glue} :step} m]
-                                        (println " " raw "         " (utils/color-str :grey (str "(from " glue-ns "/#\"" glue-regex "\")"))))))
+                                              {glue-warning :warning
+                                               glue-regex :step
+                                               glue-ns    :ns} :glue} :step} m
+                                            information-str (str " " raw "         " (utils/color-str :grey (str "(from " glue-ns "/#\"" glue-regex "\")")))]
+                                        (when (some? glue-warning)
+                                          (println (utils/color-str :yellow glue-warning)))
+                                        (println information-str))))
 
 (defmethod t/report :step-succeed [m] (t/with-test-out
                                         (println (str "      =====> " (:state m)))))
@@ -99,7 +103,6 @@
   ([& features]
    (let [reports (->> features
                       (map run-feature)
-                      (apply merge-with +)
-                      )]
+                      (apply merge-with +))]
      (t/do-report (assoc reports :type :features-summary))
      reports)))
