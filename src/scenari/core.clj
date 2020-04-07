@@ -67,14 +67,14 @@
            <eol>              = #'\r?\n'
            scenario_sentence  = #'.*'
            step_sentence      = step_keywords sentence (<eol> tab_params)?
-           sentence           = #'[\\p{L}0-9\"./\\_\\-\\':<>@ ]+'
+           sentence           = #'.*'
            examples           = <whitespace?> examples-keywords <eol> header row* <eol?>
-           tab_params         = <whitespace?> header row* <eol?>
            <examples-keywords>= <" (kw-translations :examples) ">
-           header             = <whitespace?> (<'|'> column_name)+ <'|'> <eol>
-           <column_name>      = <whitespace?> #'[\\p{L}0-9_\\- ]+' <whitespace?>
-           row                = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol>
-           <value>            = #'[\\p{L}\\p{P}\\p{Z}\\p{N}\\+]*'
+           tab_params         = <whitespace?> header row* <eol?>
+           header             = <whitespace?> (<'|'> column_name)+ <'|'> <eol?>
+           <column_name>      = <whitespace?> #'[^|]*' <whitespace?>
+           row                = <whitespace?> (<'|'> <whitespace?> value )+ <whitespace?> <'|'> <eol?>
+           <value>            = #'[^|]*'
            word               = #'[\\p{L}$€]+'
            number             = #'[0-9]+'
            ")))
@@ -109,7 +109,7 @@
                              words            = #'[a-zA-Z0-9./\\_\\-\\'èéêàûù ]+'
                              <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
                              parameter        = <'<'> parameter_name <'>'> | <'${'> parameter_name <'}'>
-                             string           = <'\"'> #'[a-zA-ZáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ0-9\\-:,./ ]+' <'\"'>
+                             string           = <'\"'> #'[^\"]*' <'\"'>
                              <data_group>     = string | map | vector
                              map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
                              elements         = (#'\".+\"|[0-9]+' <whitespace>?)*
@@ -128,7 +128,7 @@
                              words            = #'[a-zA-Z0-9./\\_\\-\\'èéêàûù ]+'
                              <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
                              parameter        = <'<'> parameter_name <'>'> | <'${'> parameter_name <'}'>
-                             string           = <'\"'> #'[a-zA-Z0-9\\-:,./ ]+' <'\"'>
+                             string           = <'\"'> #'[^\"]*' <'\"'>
                              <data_group>     = string | map | vector
                              map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
                              elements         = (#'\".+\"|[0-9]+' <whitespace>?)*
