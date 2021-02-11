@@ -3,7 +3,7 @@
 RELEASE_LEVEL=$1
 MODULE_NAME=${PWD##*/}
 echo "Release \"$MODULE_NAME\" with level '$RELEASE_LEVEL'"
-tag=$(clj -Arelease $RELEASE_LEVEL --spit --output-dir src --namespace scenari.meta --formats clj)
+tag=$(clj -M:release $RELEASE_LEVEL --spit --output-dir src --namespace scenari.meta --formats clj)
 
 if [ $? -eq 0 ]; then
     echo "Successfully released \"$MODULE_NAME\" to $tag"
@@ -39,7 +39,7 @@ fi
 
 # mvn deploy 2>&1 > /dev/null
 
-ARTIFACT_NAME=$(clj -Aartifact-name)
+ARTIFACT_NAME=$(clj -M:artifact-name)
 ARTIFACT_ID=$(echo "$ARTIFACT_NAME" | cut -f1)
 ARTIFACT_VERSION=$(echo "$ARTIFACT_NAME" | cut -f2)
 
