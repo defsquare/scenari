@@ -89,7 +89,7 @@
                                         (do
                                           (t/do-report {:type :step-succeed, :state (:output-state step-result)})
                                           (recur (:output-state step-result) others)))))))
-              _ (doseq [{post-run-fn :ref} (:pre-run scenario)]
+              _ (doseq [{post-run-fn :ref} (:post-run scenario)]
                   (post-run-fn))]
           (if scenario-result
             (t/do-report {:type :scenario-succeed, :scenario (:scenario-name scenario)})
