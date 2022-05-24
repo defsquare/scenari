@@ -178,7 +178,7 @@
          (apply str (map (fn [[what? data]]
                            (case what?
                              :words data
-                             :string "\\\"(.*)\\\""
+                             :string "\\\"([^\\\"]*)\\\""
                              :tab_params ""
                              "test")) sentence-elements))
          "\"  "
