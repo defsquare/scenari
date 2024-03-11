@@ -19,9 +19,9 @@
                                                        :sha     "83dbd1fba42e868783a93c1e58b2a4d3c2a5055b"}}
                              :main-opts  ["-m" "metav.release"]}
              :dev           {}
-             :build         {:extra-deps {luchiniatwork/cambada {:git/url "https://github.com/xfthhxk/cambada.git"
-                                                                 :sha     "c8a01477c856fc28c53f34aa3f268f8eaf683869"}}
-                             :main-opts  ["-m" "cambada.jar"]}
+             :build         {:deps        {io.github.clojure/tools.build {:git/tag "v0.9.4" :git/sha "76b78fe"}}
+                             :extra-paths ["script"]
+                             :ns-default  build}
 
              :test          {:extra-paths ["test"]
                              :extra-deps  {org.clojure/test.check {:mvn/version "1.1.0"}
