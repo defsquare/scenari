@@ -1,11 +1,9 @@
 (ns scenari.v2.core
-  (:require [clojure.test :as t :refer [is]]
-            [scenari.core :as scenari]
-            [scenari.utils :as utils]
-            [instaparse.transform :as insta-trans]
+  (:require [clojure.test :as t]
             [clojure.java.io :as io]
             [clojure.string :as string]
-            [clojure.tools.namespace.find :as ns-find])
+            [instaparse.transform :as insta-trans]
+            [scenari.core :as scenari])
   (:import (org.apache.commons.io FileUtils)
            (java.util UUID)))
 
@@ -214,10 +212,11 @@
         feature-ast# `(->feature-ast ~source# ~hooks *ns*)]
     `(do
        (ns-unmap *ns* '~name)
+       (require '[scenari.v2.test])
        (t/deftest ~(-> name
                        (vary-meta assoc :source source#)
                        (vary-meta assoc :feature-ast feature-ast#)) []
-                                                                    (scenari.v2.test/run-features (var ~name))) ;;TODO circular dependency...
+                                                                    (scenari.v2.test/run-features (var ~name)))
        ~feature-ast#)))
 
 

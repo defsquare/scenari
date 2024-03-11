@@ -1,6 +1,7 @@
 (ns scenari.v2.test
   (:require [clojure.test :as t]
             [scenari.core :as scenari]
+            [scenari.v2.core :refer [run-step]]
             [scenari.utils :as utils]))
 
 (def ^:dynamic *feature-succeed* nil)
@@ -81,7 +82,7 @@
                                   true
                                   (do
                                     (t/do-report {:type :begin-step, :step step})
-                                    (let [step-result (scenari.v2.core/run-step step state)]
+                                    (let [step-result (run-step step state)]
                                       (if (= (:status step-result) :fail)
                                         (do
                                           (t/do-report {:type :step-failed})
