@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <packaging>jar</packaging>
+
+    <groupId>io.defsquare</groupId>
+
+    <artifactId>scenari</artifactId>
+
+    <version>2.0.1-alpha</version>
+
+    <name>scenari</name>
+
+    <url>https://github.com/defsquare/scenari</url>
+
+    <description>Clojure BDD library - Executable Specification with Behavior-Driven Development</description>
+
+    <licenses>
+        <license>
+            <name>The MIT License (MIT)</name>
+            <url>http://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git://github.com:defsquare/scenari.git</connection>
+        <developerConnection>scm:git:ssh://github.com:defsquare/scenari.git</developerConnection>
+        <url>https://github.com/defsquare/scenari</url>
+    </scm>
+
+    <dependencies>
+
+        <dependency>
+
+            <groupId>org.clojure</groupId>
+
+            <artifactId>clojure</artifactId>
+
+            <version>1.10.2</version>
+
+        </dependency>
+
+        <dependency>
+
+            <groupId>org.clojure</groupId>
+
+            <artifactId>tools.logging</artifactId>
+
+            <version>0.4.1</version>
+
+        </dependency>
+
+        <dependency>
+
+            <groupId>clojure.java-time</groupId>
+
+            <artifactId>clojure.java-time</artifactId>
+
+            <version>0.3.2</version>
+
+        </dependency>
+
+        <dependency>
+
+            <groupId>instaparse</groupId>
+
+            <artifactId>instaparse</artifactId>
+
+            <version>1.4.10</version>
+
+        </dependency>
+
+        <dependency>
+
+            <groupId>commons-io</groupId>
+
+            <artifactId>commons-io</artifactId>
+
+            <version>2.6</version>
+
+        </dependency>
+
+        <dependency>
+
+            <groupId>lambdaisland</groupId>
+
+            <artifactId>kaocha</artifactId>
+
+            <version>0.0-389</version>
+
+        </dependency>
+
+        <dependency>
+
+            <groupId>org.clojure</groupId>
+
+            <artifactId>tools.namespace</artifactId>
+
+            <version>0.3.1</version>
+
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <sourceDirectory>src</sourceDirectory>
+    </build>
+
+    <distributionManagement>
+        <repository>
+            <id>clojars</id>
+            <url>https://repo.clojars.org/</url>
+        </repository>
+    </distributionManagement>
+
+    <repositories>
+
+        <repository>
+
+            <id>clojars</id>
+
+            <url>https://repo.clojars.org/</url>
+
+        </repository>
+
+    </repositories>
+
+</project>
