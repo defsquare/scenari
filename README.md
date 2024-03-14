@@ -23,17 +23,16 @@ This library was previously named "Spexec" (https://github.com/zenmodeler/spexec
 
 ```clojure
 ;;add this dependency to your project.clj file
-[scenari "1.5.0"]
+[io.defsquare/scenari "2.0.0-alpha"]
 ;;or deps.edn
 {
-scenari {:mvn/version "1.5.0"}
+ io.defsquare/scenari {:mvn/version "2.0.0-alpha"}
 }
 ;;then in your ns statement
-(:require [scenari.core :as scenari :refer [defgiven defwhen defthen run-scenarios]])
-
+(:require [scenari.v2.core :as scenari :refer [defgiven defwhen defthen deffeature]])
 ```
 
-[![Clojars Project](http://clojars.org/scenari/latest-version.svg)](http://clojars.org/scenari)
+[![Clojars Project](https://img.shields.io/clojars/v/io.defsquare/scenari.svg)](https://clojars.org/io.defsquare/scenari)
 
 ## Basic Usage
 
@@ -41,10 +40,10 @@ scenari {:mvn/version "1.5.0"}
 ### Write Scenarios in plain text
 First, write your scenarios in plain text using the [Gherkin grammar]((https://github.com/cucumber/cucumber/wiki/Gherkin)) in a file or String :
 You can add a "narrrative" for all your scenarios with the story syntax at the beginning of the story file (As a role I want to do something In order to get value)
-```Cucumber
+```Gherkin
 Scenario: create a new product
 # this is a comment
-When I create a new product with name 'iphone 6' and description 'awesome phone'
+When I create a new product with name "iphone 6" and description "awesome phone"
 Then I receive a response with an id 56422 and a location URL
 # this a second comment
 # on two lines
@@ -56,15 +55,36 @@ When I invoke a GET request on location URL
 Then I receive a 200 response
 ```
 
-### Map steps to Clojure code
+### Declaring a specification 
 
-Then write the code that will gets executed for each scenario steps:
+```clojure
+(require 'scenari.v2.core :refer [deffeature])
+
+(deffeature my-specification "./path/to/feature/file") ;; define deftest bound to symbol 'my-specification', put the specification as clojure data-structure in metadata and return the specification
+;;=> 
+;;{:scenarios [{:id "0ef9b8a9-e035-4ae2-96c4-662c0b8988de",
+;;		:pre-run (),
+;;		:post-run (),
+;;		:scenario-name " create a new product",
+;;		:steps [{:sentence-keyword :when,
+;;			 :sentence "I create a new product with name \"iphone 6\" and description \"awesome phone\"",
+;;			 :raw "When I create a new product with name \"iphone 6\" and description \"awesome phone\"",
+;;			 :params [{:type :value, :val "iphone 6"} {:type :value, :val "awesome phone"}],
+;;			 :order 0,
+;;			 :glue nil}
+;;			 ...steps]}
+;;	        ...scenarios ],
+;; :pre-run ()}
+```
+### Write glue-code
+
+Then write the code that will get executed for each scenario steps:
 
 ```clojure
 
-(require 'scenari.core :refer [defgiven defwhen defthen])
+(require 'scenari.v2.core :refer [defwhen defthen])
 
-(defwhen #"I create a new product with name '(.*)' and description '(.*)'"
+(defwhen #"I create a new product with name \"([^\"]*)\" and description \"([^\"]*)\""
 [_ name desc]
   (println "executing my product creation function with params " name desc)
   (let [id (UUID/next.)]
@@ -75,7 +95,7 @@ Then write the code that will gets executed for each scenario steps:
   	 :location-url (str "http://example.com/product/" id)}))
 
 
-(defthen #"I receive a response with an id (.+)"
+(defthen #"I receive a response with an id \"([^\"]*)\""
   [_ id]
   (println (str "executing the assertion that the product has been created with the id " id))
   id)
@@ -86,15 +106,15 @@ Example:
 
 Executing the specification with the step sentence without any matching function:
 
-```cucumber
-When I create a new product with name '(.*)' and description '(.*)'
+```gherkin
+When I create a new product with name "iphone 6" and description "awesome phone"
 ```
 
 will generate in the stdout the following step function skeleton:
 
-```clojure
-No function found for step you may add: 
-(defwhen #"I create a new product with name '(.*)' and description '(.*)'"  [arg0 arg1]  (do "something"))
+```
+Missing step for : When I create a new product with name "iphone 6" and description "awesome phone"
+(defwhen #"I create a new product with name \"([^\"]*)\" and description \"([^\"]*)\""  [state arg0 arg1]  (do "something"))
 ```
 
 ### how to get data from the scenario into your step function
@@ -104,43 +124,131 @@ Every group the regex will find (everything enclosed in parens () in your regex)
 **Tips**: the map will be detected by the parser and it'll generate a step function skeleton in the output with the correct regex group.
 
 
-### Execute Specification
+### Execute scenario(s)
+ There is three-way to execute scenarios, depending on your situation
+
+#### Tree execution
+Declaring your specification using `scenari.v2.core/deffeature` returns the parsed specification as clojure data structure. By using `scenari.v2.core/run-scenario`, the specification as data will be ran
 
 ```Clojure
-(run-scenario "resources/product-catalog.feature")
+(require 'scenari.v2.core :refer [run-feature run-features])
+(run-feature #'my-specification)
 
 ;;OR
-
-(run-scenarios "resources")
+(require 'scenari.v2.core :refer [run-scenarios])
+(run-features #'my-specification)
 ```
 
-Get a report of the execution as a Clojure data structure returned by the ```run-scenario``` function
+The execution report will be returned, rely on same clojure data-structure returned by `scenari.v2.core/deffeature`. Will set : 
+- final `:status` of scenario(s) execution
+- step `:status` as `pending` when not executed, `failed` when assertions fail or exception thrown, `success` at last
+- step `:input-state` as the value returned by the previous step executed (empty map for the first one)  
+- step `:output-state` as the value returned by the current step
 
-```Clojure
-{"scenario 1 sentence" 
-    [["step sentence 1.1 executed" {:result "data structure"}]
-     ["step sentence 1.2 executed" {:result "data structure"}]
-     ["step sentence 1.3 executed" {:result "data structure"}]]
- "scenario 2 sentence" 
-    [["step sentence 2.1 executed" {:result "data structure"}]
-     ["step sentence 2.2 executed" {:result "data structure"}]
-     ["step sentence 2.3 executed" {:result "data structure"}]]}
+This method is useful for debugging.
+
+#### Clojure-test execution
+Use clojure-test reporting system by printing execution. 
+
+```clojure
+(require 'scenari.v2.test :refer [run-feature])
+(run-feature #'my-specification)
+;; ________________________
+;; Feature :
+;; 
+;; Testing scenario :
+;; When I create a new product with name "iphone 6" and description "awesome phone"         (from /#"")
+;; Step failed
+;; create a new product failed at step  of
+;; 
+;; Testing scenario :
+;; When I invoke a GET request on location URL         (from scenari.v2.glue/#"I invoke a GET request on location URL")
+;; =====> {:kix "lol"}
+;; Then I receive a 200 response         (from /#"")
+;; Step failed
+;; get product info failed at step  of
+;; 
+;; ________________________
+;; 
+;; 
+;; Ran 1 features containing 2 scenarios.
+;; 0 success, 2 fail.
+;; =>
+;; {:test 0,
+;;  :pass 0,
+;;  :fail 2,
+;;  :error 0,
+;;  :executed-features 1,
+;;  :executed-scenarios 2,
+;;  :scenarios-failed 2,
+;;  :feature-failed 1}
+;;
 ```
+Useful to integrate a feature in a clojure test namespace
 
-### Define "Before" and "After" code
 
-```defbefore``` and ```defafter``` are two functions that take another function as a parameter that will get executed respectively before and after the scenarios execution.
-It's useful to setup a resource (like an http server or a database) and shutdown it after all scenarios get executed. You can define several before or after functions, they will all be executed before or after scenarios, though with no guarantee for their execution order.
+#### Kaocha runner
+Kaocha is a test runner and handle test phase lifecycle. 
 
+By defining a test type in your kaocha configuration file (`tests.edn` by default) like this  
+```clojure
+#kaocha/v1
+        {:tests [{:id                                :scenario
+                  :type                              :kaocha.type/scenari
+                  :kaocha/source-paths               ["src"]
+                  :kaocha/test-paths                 ["test/scenario"]
+                  :kaocha.type.scenari/glue-paths    ["test/scenario/glue"]
+                  :kaocha.type.scenari/feature-paths ["resources/scenarios"]}]}
+```
+You are able to launch your scenario using kaocha repl utility function
+
+```clojure
+(require 'kaocha.repl :as krepl)
+(krepl/run :scenario)
+
+;; Testing scenario :  create a new product
+;;   When I invoke a GET request on location URL         (from scenari.v2.glue/#"I invoke a GET request on location URL")
+;;   When I create a new product with name "iphone 6" and description "awesome phone" with properties         (from scenari.v2.glue/#"I create a new product with name \"(.*)\" and description \"(.*)\" with properties")
+;;   Then I receive a response with an id 56422         (from scenari.v2.glue/#"I receive a response with an id 56422")
+;;   Then a location URL         (from scenari.v2.glue/#"a location URL")
+;; 
+;; 
+;; 1 tests, 1 assertions, 0 failures.
+;; => #:kaocha.result{:count 1, :pass 1, :error 0, :fail 0, :pending 0}
+```
+Suitable when using kaocha to manage test lifecycle.
+
+### Using hooks
+By providing an options maps in `scenari.v2.core/deffeature`, you can specify function which execute :
+- `:pre-run` before feature execution
+- `:post-run` after feature executed
+- `:pre-scenario-run` before each scenario execution
+- `:post-scenaro-run` after each scenario executed
 Example:
 
 ```Clojure
-(defbefore (fn [] (println "that anonymous function gets executed before all scenarios")))
+(require 'scenari.v2.core :refer [deffeature])
+
+(defn before-all [] (prn "init feature components"))
+(defn before-each [] (prn "init scenario components"))
+(defn after-each [] (prn "clean scenario side effects"))
+(defn clean [] (prn "reset and shut down components"))
+
+(deffeature my-specification "./path/to/feature/file"
+			{:pre-run           [#'before-all]
+			 :pre-scenario-run  [#'before-each]
+			 :post-scenario-run [#'after-each]
+			 :post-run          [#'clean]})
 ```
 
-## Documentation
+## Documentation 
 
-### Macros
+### Declaring same step (glue-code) but different namespace
+Sometimes, you have to declare the same step (using the regex matcher) but for different context (domain or component level for exemple).
+
+TODO Put an exemple about step proximity resolution
+
+### Macros (deprecated)
 There are 3 macros available for given/when/then:
 
 ```clojure
@@ -166,7 +274,7 @@ Macros are here for convenience, plain-old function are also available, you have
 (Then regex fn)
 ```
 
-### Chaining steps
+### Chaining steps 
 Steps often produce side effect or retrieve some stuffs (fn, data) to be used in the next ones, you can store your state in your code or in the scenario itself, but I think an easier mechanism is to think of the steps like a chain and pass a data structure from the return of a step to the input of the next one (very similar to [ring handlers](https://github.com/ring-clojure/ring/wiki/Concepts) or chain of responsibility for instance). So, each step function's return is taken as the input for the next step as the first argument (you can name it `_` if you don't need it). A good practice would be to use a map or vector and then destructure it as the first param of the next step, like :
 
 ```clojure
@@ -175,7 +283,7 @@ Steps often produce side effect or retrieve some stuffs (fn, data) to be used in
          (do-something param1 k2 param2) ...)
 ```
 
-### Advanced usage
+### Advanced usage (deprecated)
 
 I use Spexec to test Spexec (yes it eats its own dog food, pretty amazing :-) only a dynamic language like Lisp can do that as easily), only the bootstrap step "Given the step function" is needed:
 
