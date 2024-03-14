@@ -209,15 +209,16 @@
 ;; ------------------------
 (defmacro deffeature [name feature & [hooks]]
   (let [feature# `~(eval feature)
+        name# `~(if (symbol? name) name (eval name))
         source# (read-source feature#)
         feature-ast# `(->feature-ast ~source# ~hooks *ns*)]
     `(do
-       (ns-unmap *ns* '~name)
+       (ns-unmap *ns* '~name#)
        (require '[scenari.v2.test])
-       (t/deftest ~(-> name
+       (t/deftest ~(-> name#
                        (vary-meta assoc :source source#)
                        (vary-meta assoc :feature-ast feature-ast#)) []
-                                                                    (scenari.v2.test/run-features (var ~name)))
+                                                                    (scenari.v2.test/run-features (var ~name#)))
        ~feature-ast#)))
 
 

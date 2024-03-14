@@ -44,7 +44,8 @@
   (t/testing "macro definition taking different feature structure"
     (t/is (some? (macroexpand '(v2/deffeature example-feature "test/scenari/v2/example.feature"))))
     (t/is (some? (macroexpand '(v2/deffeature example-feature (slurp "test/scenari/v2/example.feature")))))
-    (t/is (some? (macroexpand '(v2/deffeature example-feature (first (vector (slurp "test/scenari/v2/example.feature")))))))))
+    (t/is (some? (macroexpand '(v2/deffeature example-feature (first (vector (slurp "test/scenari/v2/example.feature")))))))
+    (t/is (some? (macroexpand '(v2/deffeature (symbol (str "example-feature")) (first (vector (slurp "test/scenari/v2/example.feature")))))))))
 
 (comment
   (remove-ns 'scenari.v2.core-test)
