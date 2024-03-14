@@ -27,9 +27,9 @@
 
 (defn find-closest-glues-by-ns [matched-glues ns-feature]
   (let [[score closest-glues-by-ns] (->> matched-glues
-                                            (map #(hash-map (ns-proximity-score (str ns-feature) (str (:ns %))) [%]))
-                                            (apply merge-with into)
-                                            (apply max-key key))]
+                                         (map #(hash-map (ns-proximity-score (str ns-feature) (str (:ns %))) [%]))
+                                         (apply merge-with into)
+                                         (apply max-key key))]
     closest-glues-by-ns))
 
 
@@ -48,7 +48,7 @@
         (if conflicts
           (throw (RuntimeException. (str (+ (count conflicts) 1) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" matched-glue "\n" (string/join "\n" conflicts))))
           (assoc matched-glue
-                 :warning (str (count matched-glues) " matching functions were found for this step sentence"))))
+            :warning (str (count matched-glues) " matching functions were found for this step sentence"))))
       :else (first matched-glues))))
 
 (defn tab-params->params [tab-params]
@@ -134,8 +134,8 @@
                                                             (assoc :glue (find-glue-by-step-regex step ns-feature)))))
                                                     contents))})
      :scenario_sentence (fn [a] {:scenario-name a})
-     :scenario          (fn [& contents] (into {:id (.toString (UUID/randomUUID))
-                                                :pre-run (map #(assoc (meta %) :ref %) (:pre-scenario-run hooks))
+     :scenario          (fn [& contents] (into {:id       (.toString (UUID/randomUUID))
+                                                :pre-run  (map #(assoc (meta %) :ref %) (:pre-scenario-run hooks))
                                                 :post-run (map #(assoc (meta %) :ref %) (:post-scenario-run hooks))}
                                                contents))
      :scenarios         (fn [& contents] {:scenarios (into [] contents)
@@ -208,7 +208,8 @@
 ;;          DEFINE
 ;; ------------------------
 (defmacro deffeature [name feature & [hooks]]
-  (let [source# (read-source feature)
+  (let [feature# `~(eval feature)
+        source# (read-source feature#)
         feature-ast# `(->feature-ast ~source# ~hooks *ns*)]
     `(do
        (ns-unmap *ns* '~name)

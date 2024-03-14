@@ -5,7 +5,6 @@
             [kaocha.type.scenari]
             [scenari.v2.glue]
             [kaocha.repl :as krepl]
-            [clojure.string :as string]
             [testit.core :refer :all]))
 
 (def side-effect-atom (atom 0))
@@ -41,12 +40,18 @@
                   (catch Exception _ false))
              false))))
 
+(t/deftest deffeature-macro-test
+  (t/testing "macro definition taking different feature structure"
+    (t/is (some? (macroexpand '(v2/deffeature example-feature "test/scenari/v2/example.feature"))))
+    (t/is (some? (macroexpand '(v2/deffeature example-feature (slurp "test/scenari/v2/example.feature")))))
+    (t/is (some? (macroexpand '(v2/deffeature example-feature (first (vector (slurp "test/scenari/v2/example.feature")))))))))
+
 (comment
   (remove-ns 'scenari.v2.core-test)
   (meta #'scenari.v2.core-test/my-feature)
   (v2/run-features)
   (v2/run-features #'scenari.v2.core-test/my-feature)
-  (sc-test/run-features #'scenari.v2.core-test/my-feature)
+  (sc-test/run-features #'scenari.v2.core-test/toto)
 
   (t/run-tests)
 
