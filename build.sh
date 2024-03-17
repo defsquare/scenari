@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-clojure -T:build uberjar
+clojure -T:build jar
