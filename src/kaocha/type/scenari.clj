@@ -15,23 +15,25 @@
 (s/def :kaocha.type/scenari (s/keys :req [:kaocha/source-paths
                                           :kaocha/test-paths]))
 
+(defn path->file "Looking path from resource or a file in file system" [path]
+  (or (io/file (io/resource path))
+      (io/file path)))
+
 (defn find-feature-in-dir [path source]
-  (->>
-    (io/resource path)
-    io/file
-    ns-find/find-namespaces-in-dir
-    (map #(ns-publics (symbol %)))
-    (mapcat #(map meta (vals %)))
-    (filter #(= (:source %) source))
-    ))
+  (->> path
+       path->file
+       ns-find/find-namespaces-in-dir
+       (map #(ns-publics (symbol %)))
+       (mapcat #(map meta (vals %)))
+       (filter #(= (:source %) source))
+       ))
 
 (defn find-feature-in-dirs [paths source]
   (mapcat #(find-feature-in-dir % source) paths))
 
 (defn paths->documents [paths]
   (->> paths
-       (map io/resource)
-       (map io/file)
+       (map path->file)
        (mapcat #(FileUtils/listFiles % (into-array ["story" "feature"]) true))
        (filter #(str/ends-with? (.getName %) ".feature"))
        (map (fn [feature-path] {:path   (.getPath feature-path)
@@ -77,8 +79,7 @@
 
 (defn- require-all-ns [paths]
   (->> paths
-       (map io/resource)
-       (map io/file)
+       (map path->file)
        (mapcat ns-find/find-namespaces-in-dir)
        (apply require)))
 
@@ -111,12 +112,12 @@
   (let [testable (sc/run-scenario testable)]
     (doseq [step (:steps testable)]
       (condp = (:status step)
-            :success (t/do-report {:type :begin-step :step step})
-            :fail (do
-                    (t/do-report {:type :begin-step :step step})
-                    (t/do-report {:type :step-failed :exception (:exception step)}))
-            :pending nil
-            nil))
+        :success (t/do-report {:type :begin-step :step step})
+        :fail (do
+                (t/do-report {:type :begin-step :step step})
+                (t/do-report {:type :step-failed :exception (:exception step)}))
+        :pending nil
+        nil))
     (-> testable
         (merge {:kaocha.result/count 1
                 :kaocha.result/pass  (if (= (:status testable) :success) 1 0)
@@ -165,7 +166,6 @@
   (krepl/test-plan {:tests [{:id                           :scenario
                              :type                         :kaocha.type/scenari
                              :kaocha/source-paths          ["src"]
-
                              :kaocha/test-paths            ["test/scenari/v2"]
                              :scenari.v2.kaocha/glue-paths ["test/scenari/v2"]}]})
 
