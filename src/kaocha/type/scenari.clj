@@ -25,8 +25,7 @@
        ns-find/find-namespaces-in-dir
        (map #(ns-publics (symbol %)))
        (mapcat #(map meta (vals %)))
-       (filter #(= (:source %) source))
-       ))
+       (filter #(= (:scenari/raw-feature %) source))))
 
 (defn find-feature-in-dirs [paths source]
   (mapcat #(find-feature-in-dir % source) paths))
@@ -38,7 +37,7 @@
        (filter #(str/ends-with? (.getName %) ".feature"))
        (map (fn [feature-path] {:path   (.getPath feature-path)
                                 :file   (.getName feature-path)
-                                :source (slurp feature-path)}))))
+                                :scenari/raw-feature (slurp feature-path)}))))
 
 (defn path->id [path]
   (-> path
@@ -69,8 +68,8 @@
           }))
 
 (defn feature->testable [testable document]
-  (let [feature-meta (first (find-feature-in-dirs (::glue-paths testable) (:source document))) ;TODO handle exception when multiple deffeature match
-        {{:keys [scenarios pre-run]} :feature-ast} feature-meta]
+  (let [feature-meta (first (find-feature-in-dirs (::glue-paths testable) (:scenari/raw-feature document))) ;TODO handle exception when multiple deffeature match
+        {{:keys [scenarios pre-run]} :scenari/feature-ast} feature-meta]
     {::testable/type         :kaocha.type/scenari-feature
      ::testable/id           (keyword (path->id (str (:project-directory document) (:file document))))
      ::testable/desc         " "                            ;; TODO fix instaparse to capture feature description

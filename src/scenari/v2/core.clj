@@ -191,7 +191,7 @@
       (recur scenarios others))))
 
 (defn run-feature [feature]
-  (let [{:keys [scenarios pre-run] :as feature-ast} (get (meta feature) :feature-ast)]
+  (let [{:keys [scenarios pre-run] :as feature-ast} (get (meta feature) :scenari/feature-ast)]
     (doseq [{pre-run-fn :ref} pre-run]
       (pre-run-fn))
     (let [scenarios (run-scenarios scenarios scenarios)]
@@ -200,7 +200,7 @@
           (assoc :status (if (contains? (set (map :status scenarios)) :fail) :fail :success))))))
 
 (defn run-features
-  ([] (apply run-features (filter #(some? (:feature-ast (meta %))) (vals (ns-interns *ns*)))))
+  ([] (apply run-features (filter #(some? (:scenari/feature-ast (meta %))) (vals (ns-interns *ns*)))))
   ([& features] (map run-feature features)))
 
 
@@ -215,10 +215,10 @@
     `(do
        (ns-unmap *ns* '~name#)
        (require '[scenari.v2.test])
-       (t/deftest ~(-> name#
-                       (vary-meta assoc :source source#)
-                       (vary-meta assoc :feature-ast feature-ast#)) []
-                                                                    (scenari.v2.test/run-features (var ~name#)))
+       (t/deftest ~(vary-meta name# assoc
+                              :scenari/raw-feature source#
+                              :scenari/feature-ast feature-ast#
+                              :scenari/feature-test true) [] (scenari.v2.test/run-features (var ~name#)))
        ~feature-ast#)))
 
 

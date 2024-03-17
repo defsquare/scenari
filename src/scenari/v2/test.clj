@@ -66,7 +66,7 @@
     (println scenarios-succeed "success," scenarios-failed "fail.")))
 
 (defn run-feature [feature]
-  (when-let [{{:keys [feature-name scenarios pre-run]} :feature-ast} (meta feature)]
+  (when-let [{{:keys [feature-name scenarios pre-run]} :scenari/feature-ast} (meta feature)]
     (doseq [{pre-run-fn :ref} pre-run]
       (pre-run-fn))
     (binding [t/*report-counters* (ref t/*initial-report-counters*)
@@ -100,7 +100,7 @@
       @t/*report-counters*)))
 
 (defn run-features
-  ([] (apply run-features (filter #(some? (:feature-ast (meta %))) (vals (ns-interns *ns*)))))
+  ([] (apply run-features (filter #(some? (:scenari/feature-ast (meta %))) (vals (ns-interns *ns*)))))
   ([& features]
    (let [reports (->> features
                       (map run-feature)
