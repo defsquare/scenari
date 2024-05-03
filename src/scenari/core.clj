@@ -172,16 +172,16 @@
       (do (prn (insta/get-failure sentence-ast
                                   )) (throw (ex-info (:reason (insta/get-failure sentence-ast)) {:parsed-text step-sentence}))))
     (str (case step-type
-           :given "(defgiven #\""
-           :and   "(defand #\""
-           :when  "(defwhen #\""
-           :then  "(defthen #\""
-           "(defwhen #\"")
+           :given "(defgiven \""
+           :and   "(defand \""
+           :when  "(defwhen \""
+           :then  "(defthen \""
+           "(defwhen \"")
          (apply str (map (fn [[what? data]]
                            (case what?
                              :words data
-                             :string "\\\"([^\\\"]*)\\\""
-                             :number "(\\d+)"
+                             :string "{string}"
+                             :number "{number}"
                              :tab_params ""
                              "test")) sentence-elements))
          "\"  "

@@ -32,13 +32,17 @@
                                          (apply max-key key))]
     closest-glues-by-ns))
 
+(defn- sentence-with-tokens->regex
+  "Replace all value token like {string} and {number} in sentence. Returns a regex"
+  [s]
+  (-> s (string/replace #"\{string\}" "\"([^\"]*)\"") (string/replace #"\{number\}" "(\\\\d+)") re-pattern))
 
 (defn find-glue-by-step-regex
   "return the tuple of fn/regex as a vector that match the step-sentence"
   [step ns-feature]
   (let [{:keys [sentence]} step
         glues (all-glues)
-        matched-glues (filter #(seq (re-matches (:step %) sentence)) glues)]
+        matched-glues (filter #(seq (re-matches (sentence-with-tokens->regex (:step %)) sentence)) glues)]
     (cond
       (empty? matched-glues)
       (do (t/do-report {:type :missing-step, :step-sentence step})

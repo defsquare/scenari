@@ -29,7 +29,7 @@
                                               {glue-warning :warning
                                                glue-regex :step
                                                glue-ns    :ns} :glue} :step} m
-                                            information-str (str " " raw "         " (utils/color-str :grey (str "(from " glue-ns "/#\"" glue-regex "\")")))]
+                                            information-str (str " " raw "         " (utils/color-str :grey (str "(from " glue-ns "/\"" glue-regex "\")")))]
                                         (when (some? glue-warning)
                                           (println (utils/color-str :yellow glue-warning)))
                                         (println information-str))))
