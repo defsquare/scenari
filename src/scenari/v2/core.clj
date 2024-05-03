@@ -221,8 +221,7 @@
        (t/deftest ~(vary-meta name# assoc
                               :scenari/raw-feature source#
                               :scenari/feature-ast feature-ast#
-                              :scenari/feature-test true) [] (scenari.v2.test/run-features (var ~name#)))
-       ~feature-ast#)))
+                              :scenari/feature-test true) [] (scenari.v2.test/run-features (var ~name#))))))
 
 
 (defn re->symbol [re]
