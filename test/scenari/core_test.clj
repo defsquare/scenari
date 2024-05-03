@@ -93,7 +93,9 @@ Then I receive a 200 response
   (test/is (= (generate-step-fn {:sentence "When I create a new products" :tab_params [{:product_name "iPhone 6" :product_desc "telephone"}]})
               "(defwhen #\"I create a new products\"  [state arg0]  (do \"something\"))"))
   (test/is (= (generate-step-fn {:sentence "When I create a new product with name \"iPhone 6\" and others" :tab_params [{:product_name "iPhone 7" :product_desc "telephone"}]})
-              "(defwhen #\"I create a new product with name \\\"([^\\\"]*)\\\" and others\"  [state arg0 arg1]  (do \"something\"))")))
+              "(defwhen #\"I create a new product with name \\\"([^\\\"]*)\\\" and others\"  [state arg0 arg1]  (do \"something\"))"))
+  (test/is (= (generate-step-fn {:sentence "When I create a new product with id 1234" :tab_params [{:product_name "iPhone 7" :product_desc "telephone"}]})
+              "(defwhen #\"I create a new product with id (\\d+)\"  [state arg0]  (do \"something\"))")))
 
 (test/deftest test-parser []
   (gherkin-parser example-scenario-multiple)
@@ -204,6 +206,9 @@ Then I receive a response with an id")
                  [:step_sentence [:then] "I receive a response with an id"]]]])))
 
 (test/deftest params-from-steps-test
+  (test/is (=
+             (params-from-steps #"When I create a new products with id (\d+)" {:sentence "When I create a new products with id 1234"})
+             [1234]))
   (test/is (=
              (params-from-steps #"When I create a new products \"(.*)\" \"(.*)\"" {:sentence   "When I create a new products \"toto\" \"123-456\""})
              ["toto" "123-456"]))

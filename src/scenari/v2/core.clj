@@ -58,7 +58,9 @@
           params-values (map (comp #(map string/trim %) rest) rows)]
       [{:type :table :val (mapv #(apply hash-map (interleave param-names %)) params-values)}])))
 
-(defn sentence-params->params [[_ val]] {:type :value :val val})
+(defn sentence-params->params [[type val]] {:type :value :val (condp = type
+                                                                    :number (read-string val)
+                                                                    :string (str val))})
 
 (defn file-from-fs-or-classpath [x]
   (let [r (io/resource x)
@@ -82,12 +84,9 @@
 (defn find-sentence-params [sentence]
   (insta-trans/transform
     {:SENTENCE (fn [& s] (->> s
-                              (filter (fn [[type _]] (= type :string)))
+                              (filter (fn [[type _]] (#{:string :number} type)))
                               (mapv sentence-params->params)))}
     (scenari/sentence-parser sentence)))
-
-(comment
-  (find-sentence-params "\"Bob Carter\" de l'organisation \"ElectreNG\""))
 
 (defmulti read-source
           (fn [path]

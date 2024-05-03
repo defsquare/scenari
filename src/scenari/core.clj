@@ -106,11 +106,12 @@
 ;; TODO use combinator !
 (def sentence-parser (insta/parser
                        (str "SENTENCE         = <whitespace>? (words | data_group | parameter)* <eol>?
-                             words            = #'[a-zA-Z0-9./\\_\\-\\'èéêàûù ]+'
-                             <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
+                             words            = #'[a-zA-Z./\\_\\-\\'èéêàûù ]+'
+                             <parameter_name> = #'[a-zA-Z\"./\\_\\- ]+'
                              parameter        = <'<'> parameter_name <'>'> | <'${'> parameter_name <'}'>
                              string           = <'\"'> #'[^\"]*' <'\"'>
-                             <data_group>     = string | map | vector
+                             number           = #'\\d+'
+                             <data_group>     = string | number | map | vector
                              map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
                              elements         = (#'\".+\"|[0-9]+' <whitespace>?)*
                              vector           = <'['> elements <']'>
@@ -125,11 +126,12 @@
                              when             = <" (kw-translations :when) ">
                              then             = <" (kw-translations :then) ">
                              and              = <" (kw-translations :and) ">
-                             words            = #'[a-zA-Z0-9./\\_\\-\\'èéêàûù ]+'
-                             <parameter_name> = #'[a-zA-Z0-9\"./\\_\\- ]+'
+                             words            = #'[a-zA-Z./\\_\\-\\'èéêàûù ]+'
+                             <parameter_name> = #'[a-zA-Z\"./\\_\\- ]+'
                              parameter        = <'<'> parameter_name <'>'> | <'${'> parameter_name <'}'>
                              string           = <'\"'> #'[^\"]*' <'\"'>
-                             <data_group>     = string | map | vector
+                             number           = #'\\d+'
+                             <data_group>     = string | number | map | vector
                              map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
                              elements         = (#'\".+\"|[0-9]+' <whitespace>?)*
                              vector           = <'['> elements <']'>
@@ -179,6 +181,7 @@
                            (case what?
                              :words data
                              :string "\\\"([^\\\"]*)\\\""
+                             :number "(\\d+)"
                              :tab_params ""
                              "test")) sentence-elements))
          "\"  "

@@ -30,6 +30,13 @@
 (v2/defgiven #"My duplicated step in other ns and feature ns" [state]
              state)
 
+(t/deftest find-sentence-params-test
+  (t/testing "finding parameters in sentence"
+    (is (= (v2/find-sentence-params "Given an id 1234") [{:type :value, :val 1234}]) "should return number value")
+    (is (= (v2/find-sentence-params "Given an id \"1234\"") [{:type :value, :val "1234"}]) "should return string value")
+    (is (= (v2/find-sentence-params "Given an id abc") []) "should return no parameters")
+    (is (= (v2/find-sentence-params "Given an id 1234 and \"1234\" ") [{:type :value, :val 1234} {:type :value, :val "1234"}]) "should return multiple value")))
+
 (t/deftest duplicate-glues-test
   (require 'scenari.v2.glue)
   (require 'scenari.v2.other-glue.glue)
