@@ -51,7 +51,6 @@
                                            (reset! *feature-succeed* false)
                                            (t/inc-report-counter :fail)
                                            (t/inc-report-counter :scenarios-failed)
-                                           (println (utils/color-str :red (:scenario m) " failed at step " (:executed-steps m) " of " (:total-steps m)))
                                            (println (utils/color-str :red (:ex m)))))
 
 (defmethod t/report :missing-step [{:keys [step-sentence]}] (t/with-test-out
