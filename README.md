@@ -84,7 +84,7 @@ Then write the code that will get executed for each scenario steps:
 
 (require 'scenari.v2.core :refer [defwhen defthen])
 
-(defwhen #"I create a new product with name \"([^\"]*)\" and description \"([^\"]*)\""
+(defwhen "I create a new product with name {string} and description {string}"
 [_ name desc]
   (println "executing my product creation function with params " name desc)
   (let [id (UUID/next.)]
@@ -95,13 +95,13 @@ Then write the code that will get executed for each scenario steps:
   	 :location-url (str "http://example.com/product/" id)}))
 
 
-(defthen #"I receive a response with an id \"([^\"]*)\""
+(defthen "I receive a response with an id {string}"
   [_ id]
   (println (str "executing the assertion that the product has been created with the id " id))
   id)
 ```
 
-**Tips**: you can get a function snippet generated for you when executing the spec without step function. Think about enclosing with quote 'your data' in step sentence to get them detected by the parser and it'll generate a step function skeleton in the output with the correct regex group.
+**Tips**: you can get a function snippet generated for you when executing the spec without step function. Think about enclosing with quote 'your data' in step sentence to get them detected by the parser and it'll generate a step function skeleton in the output with the correct sentence matcher group.
 Example: 
 
 Executing the specification with the step sentence without any matching function:
@@ -114,14 +114,14 @@ will generate in the stdout the following step function skeleton:
 
 ```
 Missing step for : When I create a new product with name "iphone 6" and description "awesome phone"
-(defwhen #"I create a new product with name \"([^\"]*)\" and description \"([^\"]*)\""  [state arg0 arg1]  (do "something"))
+(defwhen "I create a new product with name {string} and description {string}"  [state arg0 arg1]  (do "something"))
 ```
 
 ### how to get data from the scenario into your step function
 
-Every group the regex will find (everything enclosed in parens () in your regex) will be transmitted as a string to your step function params with the same left-to-right order, BUT the data is first evaluated as clojure.edn data string (see [clojure.edn/read-string](https://clojure.github.io/clojure/clojure.edn-api.html)) and IF it is a Clojure data structure ((coll? evaluated-data) returns true), THEN it will be transmitted evaluated as a param to the step function.
+Every group the sentence matcher will find (everything enclosed in curly braces in your sentence matcher) will be transmitted as a string to your step function params with the same left-to-right order, BUT the data is first evaluated as clojure.edn data string (see [clojure.edn/read-string](https://clojure.github.io/clojure/clojure.edn-api.html)) and IF it is a Clojure data structure ((coll? evaluated-data) returns true), THEN it will be transmitted evaluated as a param to the step function.
 
-**Tips**: the map will be detected by the parser and it'll generate a step function skeleton in the output with the correct regex group.
+**Tips**: the map will be detected by the parser and it'll generate a step function skeleton in the output with the correct sentence matcher.
 
 
 ### Execute scenario(s)
@@ -157,14 +157,14 @@ Use clojure-test reporting system by printing execution.
 ;; Feature :
 ;; 
 ;; Testing scenario :
-;; When I create a new product with name "iphone 6" and description "awesome phone"         (from /#"")
+;; When I create a new product with name "iphone 6" and description "awesome phone"         (from /")
 ;; Step failed
 ;; create a new product failed at step  of
 ;; 
 ;; Testing scenario :
-;; When I invoke a GET request on location URL         (from scenari.v2.glue/#"I invoke a GET request on location URL")
+;; When I invoke a GET request on location URL         (from scenari.v2.glue/"I invoke a GET request on location URL")
 ;; =====> {:kix "lol"}
-;; Then I receive a 200 response         (from /#"")
+;; Then I receive a 200 response         (from /"")
 ;; Step failed
 ;; get product info failed at step  of
 ;; 
@@ -207,10 +207,10 @@ You are able to launch your scenario using kaocha repl utility function
 (krepl/run :scenario)
 
 ;; Testing scenario :  create a new product
-;;   When I invoke a GET request on location URL         (from scenari.v2.glue/#"I invoke a GET request on location URL")
-;;   When I create a new product with name "iphone 6" and description "awesome phone" with properties         (from scenari.v2.glue/#"I create a new product with name \"(.*)\" and description \"(.*)\" with properties")
-;;   Then I receive a response with an id 56422         (from scenari.v2.glue/#"I receive a response with an id 56422")
-;;   Then a location URL         (from scenari.v2.glue/#"a location URL")
+;;   When I invoke a GET request on location URL         (from scenari.v2.glue/"I invoke a GET request on location URL")
+;;   When I create a new product with name "iphone 6" and description "awesome phone" with properties         (from scenari.v2.glue/"I create a new product with name \"(.*)\" and description \"(.*)\" with properties")
+;;   Then I receive a response with an id 56422         (from scenari.v2.glue/"I receive a response with an id 56422")
+;;   Then a location URL         (from scenari.v2.glue/"a location URL")
 ;; 
 ;; 
 ;; 1 tests, 1 assertions, 0 failures.
@@ -255,7 +255,7 @@ By default, the scenario state is an empty map `{}`.
 ## Documentation 
 
 ### Declaring same step (glue-code) but different namespace
-Sometimes, you have to declare the same step (using the regex matcher) but for different context (domain or component level for exemple).
+Sometimes, you have to declare the same step (using the sentence matcher) but for different context (domain or component level for exemple).
 
 TODO Put an exemple about step proximity resolution
 
@@ -263,33 +263,33 @@ TODO Put an exemple about step proximity resolution
 There are 3 macros available for given/when/then:
 
 ```clojure
-;; a regex for matching a step in the scenarios
+;; a sentence for matching a step in the scenarios
 ;; a params vector: 
 ;;    the first param is the return of the previous step (nil if first step)
-;;    then one param for each regex group (aka. something in parens (...)) you define.
+;;    then one param for each sentence group (aka. something in parens (...)) you define.
 ;; a body function.
 
-(defgiven regex params body)
-(defwhen regex params body)
-(defthen regex params body)
+(defgiven sentence-matcher params body)
+(defwhen sentence-matcher params body)
+(defthen sentence-matcher params body)
 ```
 
-Macros are here for convenience, plain-old function are also available, you have to provide the step execution function as parameters with the function having groups count + 1 parameters (one for the previous step return and one params for each groups in the regex).
+Macros are here for convenience, plain-old function are also available, you have to provide the step execution function as parameters with the function having groups count + 1 parameters (one for the previous step return and one params for each groups in the sentence matcher).
 
 ```clojure
 (ns mystuff
   (:require [spexec :as spec]))
 ...
-(Given regex fn)
-(When regex fn)
-(Then regex fn)
+(Given sentence-matcher fn)
+(When sentence-matcher fn)
+(Then sentence-matcher fn)
 ```
 
 ### Chaining steps 
 Steps often produce side effect or retrieve some stuffs (fn, data) to be used in the next ones, you can store your state in your code or in the scenario itself, but I think an easier mechanism is to think of the steps like a chain and pass a data structure from the return of a step to the input of the next one (very similar to [ring handlers](https://github.com/ring-clojure/ring/wiki/Concepts) or chain of responsibility for instance). So, each step function's return is taken as the input for the next step as the first argument (you can name it `_` if you don't need it). A good practice would be to use a map or vector and then destructure it as the first param of the next step, like :
 
 ```clojure
-(defwhen #"my sentence to be matched with (.*) and (.*)" 
+(defwhen "my sentence to be matched with {string} and {string}" 
          [[key1-in-previous-result k2] param1 param2] 
          (do-something param1 k2 param2) ...)
 ```
@@ -309,7 +309,7 @@ Then I should get 'processedmydatavalues' from scenario file 'resources/spexec.f
 ```
 
 ```clojure
-(defgiven #"the step function: (.+)" [_ step-fn]
+(defgiven "the step function: {string}" [_ step-fn]
    (eval (read-string step-fn)))
 ```
 
@@ -328,7 +328,6 @@ Also, steps and scenarios association must be isolated within namespace to avoid
 The compatibility with clojure.test would also be with its various reports available (`:pass`, `:fail`, etc.) with reports specific to narrative, scenarios and steps. 
 Concerning assertion, steps could contains `clojure.test/is` assertions or throws exception that will be handled properly like clojure.test ones. 
 
-I use the [regex facility](http://clojure.org/other_functions) provided by Clojure (#"regex expression"), not the most readable with all that parens, sharps, double-quote, etc. but the most supple when you need to extract specific data from your sentence. 
 The gherkin grammar parser is written with the amazing [Instaparse](https://github.com/Engelberg/instaparse) library (I thumbs up for the ClojureScript port by the way!).
 
 I did a presentation of the internals of the library at the Clojure Paris User Group and the slides are here: ["Anatomy of a BDD Execution Library in Clojure"](https://speakerdeck.com/jgrodziski/anatomy-of-a-bdd-execution-library-in-clojure).
@@ -341,7 +340,7 @@ I did a presentation of the internals of the library at the Clojure Paris User G
 
 Scenari is released under the terms of the [MIT License](http://opensource.org/licenses/MIT).
 
-Copyright © 2020 Jérémie Grodziski jeremie@grodziski.com
+Copyright © 2024 DefSquare defsquare.io
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
