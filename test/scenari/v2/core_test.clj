@@ -28,6 +28,15 @@
                 :post-scenario-run [#'post-scenario-run-side-effect]
                 :post-run          [#'init-side-effect]})
 
+(v2/defthen "My initial state contains foo"  [state] (is (= state {:foo 1})) state)
+
+(v2/deffeature my-feature
+               "
+Feature: foo bar kix
+  Scenario: create a new product
+      Then My initial state contains foo"
+               {:default-scenario-state {:foo 1}})
+
 (v2/defgiven #"My duplicated step in other ns and feature ns" [state]
              state)
 

@@ -241,6 +241,17 @@ Example:
 			 :post-run          [#'clean]})
 ```
 
+### Provide an initial state
+For each scenario execution, an initial state can be provided within the options map of `deffeature`.
+
+Example:
+
+```clojure
+(deffeature my-specification "./path/to/feature/file"
+			{:default-scenario-state {:foo "bar"}})
+```
+By default, the scenario state is an empty map `{}`.
+
 ## Documentation 
 
 ### Declaring same step (glue-code) but different namespace

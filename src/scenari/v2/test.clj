@@ -75,7 +75,7 @@
         (t/do-report {:type :begin-scenario, :scenario (:name name)})
         (let [_ (doseq [{pre-run-fn :ref} (:pre-run scenario)]
                   (pre-run-fn))
-              scenario-result (loop [state {}
+              scenario-result (loop [state (:default-state scenario)
                                      [step & others] (:steps scenario)]
                                 (if-not step
                                   true

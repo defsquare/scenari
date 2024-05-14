@@ -119,7 +119,7 @@
 
 (defmethod read-source :feature-as-str [source] source)
 
-(defn ->feature-ast [source hooks ns-feature]
+(defn ->feature-ast [source {:keys [pre-run pre-scenario-run post-scenario-run default-scenario-state] :as _options} ns-feature]
   (insta-trans/transform
     {:SPEC              (fn [& s] (apply merge s))
      :narrative         (fn [& n] {:feature n})
@@ -137,12 +137,13 @@
                                                             (assoc :glue (find-glue-by-step-regex step ns-feature)))))
                                                     contents))})
      :scenario_sentence (fn [a] {:scenario-name a})
-     :scenario          (fn [& contents] (into {:id       (.toString (UUID/randomUUID))
-                                                :pre-run  (map #(assoc (meta %) :ref %) (:pre-scenario-run hooks))
-                                                :post-run (map #(assoc (meta %) :ref %) (:post-scenario-run hooks))}
+     :scenario          (fn [& contents] (into {:id            (.toString (UUID/randomUUID))
+                                                :pre-run       (map #(assoc (meta %) :ref %) pre-scenario-run)
+                                                :post-run      (map #(assoc (meta %) :ref %) post-scenario-run)
+                                                :default-state (or default-scenario-state {})}
                                                contents))
      :scenarios         (fn [& contents] {:scenarios (into [] contents)
-                                          :pre-run   (map #(assoc (meta %) :ref %) (:pre-run hooks))})}
+                                          :pre-run   (map #(assoc (meta %) :ref %) pre-run)})}
     (scenari/gherkin-parser source)))
 
 ;; ------------------------
@@ -176,10 +177,11 @@
         (recur steps output-state others)))))
 
 (defn run-scenario [scenario]
-  (let [pending-steps (map #(assoc % :status :pending) (:steps scenario))
+  (let [default-state (:default-state scenario)
+        pending-steps (map #(assoc % :status :pending) (:steps scenario))
         _ (doseq [{pre-run-fn :ref} (:pre-run scenario)]
             (pre-run-fn))
-        result-steps (run-steps pending-steps {} pending-steps)
+        result-steps (run-steps pending-steps default-state pending-steps)
         _ (doseq [{post-run-fn :ref} (:post-run scenario)]
             (post-run-fn))]
     (-> scenario
@@ -210,11 +212,11 @@
 ;; ------------------------
 ;;          DEFINE
 ;; ------------------------
-(defmacro deffeature [name feature & [hooks]]
+(defmacro deffeature [name feature & [options]]
   (let [feature# `~(eval feature)
         name# `~(if (symbol? name) name (eval name))
         source# (read-source feature#)
-        feature-ast# `(->feature-ast ~source# ~hooks *ns*)]
+        feature-ast# `(->feature-ast ~source# ~options *ns*)]
     `(do
        (ns-unmap *ns* '~name#)
        (require '[scenari.v2.test])
