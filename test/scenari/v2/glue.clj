@@ -8,7 +8,7 @@
             {:foo "bar"})
 
 (v2/defthen "I receive a response with an id {number}" [state n]
-            (is (= 56421 n))
+            (is (= 56422 n))
             state)
 
 (v2/defthen "a location URL" [state]

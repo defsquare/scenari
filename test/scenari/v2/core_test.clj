@@ -30,7 +30,7 @@
 
 (v2/defthen "My initial state contains foo"  [state] (is (= state {:foo 1})) state)
 
-(v2/deffeature my-feature
+(v2/deffeature my-feature-2
                "
 Feature: foo bar kix
   Scenario: create a new product
