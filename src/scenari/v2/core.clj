@@ -122,6 +122,8 @@
 (defn ->feature-ast [source {:keys [pre-run pre-scenario-run post-scenario-run default-scenario-state] :as _options} ns-feature]
   (insta-trans/transform
     {:SPEC              (fn [& s] (apply merge s))
+     :annotation        (fn [s] s)
+     :annotations       (fn [& s] {:annotations (set s)})
      :narrative         (fn [& n] {:feature n})
      :sentence          str
      :steps             (fn [& contents]
