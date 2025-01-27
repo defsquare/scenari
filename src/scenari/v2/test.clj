@@ -34,8 +34,7 @@
                                           (println (utils/color-str :yellow glue-warning)))
                                         (println information-str))))
 
-(defmethod t/report :step-succeed [m] (t/with-test-out
-                                        (println (str "      =====> " (:state m)))))
+(defmethod t/report :step-succeed [_] (t/with-test-out ""))
 
 (defmethod t/report :step-failed [m] (t/with-test-out
                                        (println (utils/color-str :red "Step failed"))
