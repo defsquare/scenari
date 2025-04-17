@@ -1,4 +1,4 @@
-(ns scenari.v2.glue
+(ns scenari.v2.some-glue-ns
   (:require [clojure.test :refer :all]
             [scenari.v2.core :as v2]))
 

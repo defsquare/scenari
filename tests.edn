@@ -5,5 +5,12 @@
                         :kaocha/test-paths              ["test/scenari/v2"]
                         :kaocha.type.scenari/glue-paths ["scenari/v2"]
                         :kaocha.type.scenari/feature-paths ["scenari/v2"]}
+                       
+                       {:id                :unit
+                        :type              :kaocha.type/clojure.test
+                        :source-paths      ["src"]
+                        :test-paths        ["test"]
+                        :ns-patterns       ["scenari.*-test"]
+                        :kaocha.filter/skip-meta [:scenari/feature-test :integration]}
                        ]
      :kaocha/reporter kaocha.report/documentation}

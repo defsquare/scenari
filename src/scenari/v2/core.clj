@@ -3,7 +3,8 @@
             [clojure.java.io :as io]
             [clojure.string :as string]
             [instaparse.transform :as insta-trans]
-            [scenari.core :as scenari])
+            [scenari.core :as scenari]
+            [scenari.v2.glue :as glue])
   (:import (org.apache.commons.io FileUtils)
            (java.util UUID)))
 
@@ -11,49 +12,6 @@
 ;; ------------------------
 ;;          LOAD
 ;; ------------------------
-(defn all-glues []
-  (->> (all-ns)
-       (mapcat #(vals (ns-publics %)))
-       (map #(assoc (meta %) :ref %))
-       (filter #(contains? % :step))))
-
-(defn ns-proximity-score [ns-glue ns-feature]
-  (loop [[ns-glue & child-ns-glue] (string/split ns-glue #"\.")
-         [ns-feature & child-ns-feature] (string/split ns-feature #"\.")
-         score 0]
-    (if (or (not ns-feature) (not ns-glue) (not= ns-glue ns-feature))
-      score
-      (recur child-ns-glue child-ns-feature (inc score)))))
-
-(defn find-closest-glues-by-ns [matched-glues ns-feature]
-  (let [[score closest-glues-by-ns] (->> matched-glues
-                                         (map #(hash-map (ns-proximity-score (str ns-feature) (str (:ns %))) [%]))
-                                         (apply merge-with into)
-                                         (apply max-key key))]
-    closest-glues-by-ns))
-
-(defn- sentence-with-tokens->regex
-  "Replace all value token like {string} and {number} in sentence. Returns a regex"
-  [s]
-  (-> s (string/replace #"\{string\}" "\"([^\"]*)\"") (string/replace #"\{number\}" "(\\\\d+)") re-pattern))
-
-(defn find-glue-by-step-regex
-  "return the tuple of fn/regex as a vector that match the step-sentence"
-  [step ns-feature]
-  (let [{:keys [sentence]} step
-        glues (all-glues)
-        matched-glues (filter #(seq (re-matches (sentence-with-tokens->regex (:step %)) sentence)) glues)]
-    (cond
-      (empty? matched-glues)
-      (do (t/do-report {:type :missing-step, :step-sentence step})
-          nil)
-      (> (count matched-glues) 1)
-      (let [[matched-glue & conflicts] (find-closest-glues-by-ns matched-glues ns-feature)]
-        (if conflicts
-          (throw (RuntimeException. (str (+ (count conflicts) 1) " matching functions were found for the following step sentence:\n " sentence ", please refine your regexes that match: \n" matched-glue "\n" (string/join "\n" conflicts))))
-          (assoc matched-glue
-            :warning (str (count matched-glues) " matching functions were found for this step sentence"))))
-      :else (first matched-glues))))
 
 (defn tab-params->params [tab-params]
   (when tab-params
@@ -136,7 +94,7 @@
                                                                           {:params params}))]
                                                         (-> step
                                                             (assoc :order i)
-                                                            (assoc :glue (find-glue-by-step-regex step ns-feature)))))
+                                                            (assoc :glue (glue/find-glue-by-step-regex step ns-feature)))))
                                                     contents))})
      :scenario_sentence (fn [a] {:scenario-name a})
      :scenario          (fn [& contents] (into {:id            (.toString (UUID/randomUUID))
