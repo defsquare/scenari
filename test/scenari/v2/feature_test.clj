@@ -31,8 +31,7 @@
 (v2/defthen "My initial state contains foo"  [state] (is (= state {:foo 1})) state)
 
 (v2/deffeature my-feature-2
-               "
-Feature: foo bar kix
+               "Feature: foo bar kix
   Scenario: create a new product
       Then My initial state contains foo"
                {:default-scenario-state {:foo 1}})

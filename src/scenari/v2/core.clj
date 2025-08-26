@@ -82,7 +82,7 @@
     {:SPEC              (fn [& s] (apply merge s))
      :annotation        (fn [s] s)
      :annotations       (fn [& s] {:annotations (set s)})
-     :narrative         (fn [& n] {:feature n})
+     :narrative         (fn [& n] {:feature (string/join " " n)})
      :sentence          str
      :steps             (fn [& contents]
                           {:steps (vec (map-indexed (fn [i [_ [step-key] sentence tab-params]]

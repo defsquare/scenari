@@ -64,12 +64,12 @@
     (println scenarios-succeed "success," scenarios-failed "fail.")))
 
 (defn run-feature [feature]
-  (when-let [{{:keys [feature-name scenarios pre-run]} :scenari/feature-ast} (meta feature)]
+  (when-let [{{:keys [feature scenarios pre-run]} :scenari/feature-ast} (meta feature)]
     (doseq [{pre-run-fn :ref} pre-run]
       (pre-run-fn))
     (binding [t/*report-counters* (ref t/*initial-report-counters*)
               *feature-succeed* (atom true)]
-      (t/do-report {:type :begin-feature, :feature feature-name})
+      (t/do-report {:type :begin-feature, :feature feature})
       (doseq [scenario scenarios]
         (t/do-report {:type :begin-scenario, :scenario (:name name)})
         (let [_ (doseq [{pre-run-fn :ref} (:pre-run scenario)]
@@ -94,7 +94,7 @@
             (t/do-report {:type :scenario-succeed, :scenario (:scenario-name scenario)})
             (t/do-report {:type     :scenario-failed
                           :scenario (:scenario-name scenario)}))))
-      (t/do-report {:type :end-feature, :feature feature-name :succeed? @*feature-succeed*})
+      (t/do-report {:type :end-feature, :feature feature :succeed? @*feature-succeed*})
       @t/*report-counters*)))
 
 (defn run-features
