@@ -254,6 +254,12 @@ By default, the scenario state is an empty map `{}`.
 
 ## Documentation 
 
+### Development Workflow
+The [Development Workflow Guide](doc/development-workflow.md) provides a comprehensive overview of the full development cycle when using Scenari. It covers writing feature files, defining features in code, implementing step definitions, and understanding how execution works.
+
+### Internal Feature Structure
+The [Feature Structure Documentation](doc/feature-structure.md) provides a detailed explanation of the internal data structure used to represent features, scenarios, and steps in Scenari. This is particularly useful when extending or customizing Scenari.
+
 ### Declaring same step (glue-code) but different namespace
 Sometimes, you have to declare the same step (using the sentence matcher) but for different context (domain or component level for exemple).
 
@@ -335,6 +341,7 @@ I did a presentation of the internals of the library at the Clojure Paris User G
 ## TODOS
 
 * stop-on-failure? as an option for execution
+* give another way to declare steps without macro (proper defn with `:scenari/regex` in meta)
 
 ## License
 
