@@ -14,7 +14,7 @@ Feature: my feature
   Scenario: scenario 2
     Given a step")
          [:SPEC
-          [:narrative]
+          [:narrative "my feature"]
           [:scenarios
            [:scenario
             [:scenario_sentence " scenario 1"]
@@ -36,7 +36,7 @@ Feature: my feature
     Given a step")
          [:SPEC
           [:annotations [:annotation "Annotation1"] [:annotation "Annotation2"]]
-          [:narrative]
+          [:narrative "my feature"]
           [:scenarios
            [:scenario
             [:scenario_sentence " scenario 1"]
@@ -139,13 +139,15 @@ Scenario: scenario 1
   Given a step")
          [:SPEC
           [:narrative
-            [:as_a "user"]
-            [:I_want_to "login"]
-            [:so_that "I gain access to the protected resource"]]
+           "feature with full narrative"
+           [:as_a "user"]
+           [:I_want_to "login"]
+           [:so_that "I gain access to the protected resource"]]
           [:scenarios
            [:scenario
             [:scenario_sentence " scenario 1"]
-            [:steps [:step_sentence [:given] [:sentence "a step"]]]]]])))
+            [:steps
+             [:step_sentence [:given] [:sentence "a step"]]]]]])))
 
 (deftest sentence-parser-test
   (testing "Parsing sentences with parameters"
@@ -215,7 +217,7 @@ Feature: feature with comments
   
 # Comment at the end")
          [:SPEC
-          [:narrative]
+          [:narrative "feature with comments"]
           [:scenarios
            [:scenario
             [:scenario_sentence " scenario with comments"]
