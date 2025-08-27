@@ -22,7 +22,7 @@
 
 (defmethod t/report :begin-scenario [m] (t/with-test-out
                                           (t/inc-report-counter :executed-scenarios)
-                                          (println (str "Testing scenario : " (:scenario-name m)))))
+                                          (println (str "Testing scenario : " (:scenario m)))))
 
 (defmethod t/report :begin-step [m] (t/with-test-out
                                       (let [{{:keys            [raw]
@@ -71,7 +71,7 @@
               *feature-succeed* (atom true)]
       (t/do-report {:type :begin-feature, :feature feature})
       (doseq [scenario scenarios]
-        (t/do-report {:type :begin-scenario, :scenario (:name name)})
+        (t/do-report {:type :begin-scenario, :scenario (:scenario-name scenario)})
         (let [_ (doseq [{pre-run-fn :ref} (:pre-run scenario)]
                   (pre-run-fn))
               scenario-result (loop [state (:default-state scenario)
