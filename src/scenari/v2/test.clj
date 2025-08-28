@@ -1,0 +1,97 @@
+(ns scenari.v2.test
+  (:require [clojure.test :as t]
+            [scenari.v2.step :refer [generate-step-fn]]
+            [scenari.v2.core :refer [run-step]]
+            [scenari.utils :as utils]))
+
+(def ^:dynamic *feature-succeed* nil)
+
+(defmethod t/report :begin-feature [m] (t/with-test-out
+                                         (t/inc-report-counter :executed-features)
+                                         (println)
+                                         (println (str "________________________"))
+                                         (println (str "Feature : " (:feature m)))
+                                         (println)))
+
+(defmethod t/report :feature-succeed [_] (t/inc-report-counter :feature-succeed))
+
+(defmethod t/report :end-feature [{:keys [succeed?]}]
+  (if succeed? (t/inc-report-counter :feature-succeed) (t/inc-report-counter :feature-failed))
+  (t/with-test-out
+    (println (str "________________________"))
+    (println)))
+
+(defmethod t/report :begin-scenario [m] (t/with-test-out
+                                          (t/inc-report-counter :test)
+                                          (t/inc-report-counter :executed-scenarios)
+                                          (println (str "Testing scenario : " (:scenario m)))))
+
+(defmethod t/report :begin-step [m] (t/with-test-out
+                                      (let [{{:keys            [raw]
+                                              {glue-warning :warning
+                                               glue-regex :step
+                                               glue-ns    :ns} :glue} :step} m
+                                            information-str (str " " raw "         " (utils/color-str :grey (str "(from " glue-ns "/\"" glue-regex "\")")))]
+                                        (when (some? glue-warning)
+                                          (println (utils/color-str :yellow glue-warning)))
+                                        (println information-str))))
+
+(defmethod t/report :step-succeed [_] (t/with-test-out ""))
+
+(defmethod t/report :step-failed [m] (t/with-test-out
+                                       (println (utils/color-str :red "Step failed"))
+                                       (some->> (:exception m) clojure.stacktrace/print-stack-trace)))
+
+(defmethod t/report :scenario-succeed [m] (t/with-test-out
+                                            (t/inc-report-counter :pass)
+                                            (t/inc-report-counter :scenarios-succeed)
+                                            (println (utils/color-str :green (:scenario m) " succeed !"))
+                                            (println)))
+
+(defmethod t/report :scenario-failed [m] (t/with-test-out
+                                           (reset! *feature-succeed* false)
+                                           (t/inc-report-counter :fail)
+                                           (t/inc-report-counter :scenarios-failed)
+                                           (println (utils/color-str :red (:ex m)))))
+
+(defmethod t/report :missing-step [{:keys [step-sentence]}] (t/with-test-out
+                                                              (println (utils/color-str :red "Missing step for : " (get step-sentence :raw)))
+                                                              (println (utils/color-str :red (generate-step-fn {:sentence (get step-sentence :raw)})))))
+
+(defn run-feature [feature]
+  (when-let [{{:keys [feature scenarios pre-run]} :scenari/feature-ast} (meta feature)]
+    (doseq [{pre-run-fn :ref} pre-run]
+      (pre-run-fn))
+    (binding [*feature-succeed* (atom true)]
+      (t/do-report {:type :begin-feature, :feature feature})
+      (doseq [scenario scenarios]
+        (t/do-report {:type :begin-scenario, :scenario (:scenario-name scenario)})
+        (let [_ (doseq [{pre-run-fn :ref} (:pre-run scenario)]
+                  (pre-run-fn))
+              scenario-result (loop [state (:default-state scenario)
+                                     [step & others] (:steps scenario)]
+                                (if-not step
+                                  true
+                                  (do
+                                    (t/do-report {:type :begin-step, :step step})
+                                    (let [step-result (run-step step state)]
+                                      (if (= (:status step-result) :fail)
+                                        (do
+                                          (t/do-report {:type :step-failed})
+                                          false)
+                                        (do
+                                          (t/do-report {:type :step-succeed, :state (:output-state step-result)})
+                                          (recur (:output-state step-result) others)))))))
+              _ (doseq [{post-run-fn :ref} (:post-run scenario)]
+                  (post-run-fn))]
+          (if scenario-result
+            (t/do-report {:type :scenario-succeed, :scenario (:scenario-name scenario)})
+            (t/do-report {:type     :scenario-failed
+                          :scenario (:scenario-name scenario)}))))
+      (t/do-report {:type :end-feature, :feature feature :succeed? @*feature-succeed*}))))
+
+(defn run-features
+  ([] (apply run-features (filter #(some? (:scenari/feature-ast (meta %))) (vals (ns-interns *ns*)))))
+  ([& features]
+   (doseq [feature features]
+     (run-feature feature))))

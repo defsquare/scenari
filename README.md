@@ -23,17 +23,16 @@ This library was previously named "Spexec" (https://github.com/zenmodeler/spexec
 
 ```clojure
 ;;add this dependency to your project.clj file
-[scenari "1.5.0"]
+[io.defsquare/scenari "2.0.0"]
 ;;or deps.edn
 {
-scenari {:mvn/version "1.5.0"}
+ io.defsquare/scenari {:mvn/version "2.0.0"}
 }
 ;;then in your ns statement
-(:require [scenari.core :as scenari :refer [defgiven defwhen defthen run-scenarios]])
-
+(:require [scenari.v2.core :as scenari :refer [defgiven defwhen defthen deffeature]])
 ```
 
-[![Clojars Project](http://clojars.org/scenari/latest-version.svg)](http://clojars.org/scenari)
+[![Clojars Project](https://img.shields.io/clojars/v/io.defsquare/scenari.svg)](https://clojars.org/io.defsquare/scenari)
 
 ## Basic Usage
 
@@ -41,10 +40,10 @@ scenari {:mvn/version "1.5.0"}
 ### Write Scenarios in plain text
 First, write your scenarios in plain text using the [Gherkin grammar]((https://github.com/cucumber/cucumber/wiki/Gherkin)) in a file or String :
 You can add a "narrrative" for all your scenarios with the story syntax at the beginning of the story file (As a role I want to do something In order to get value)
-```Cucumber
+```Gherkin
 Scenario: create a new product
 # this is a comment
-When I create a new product with name 'iphone 6' and description 'awesome phone'
+When I create a new product with name "iphone 6" and description "awesome phone"
 Then I receive a response with an id 56422 and a location URL
 # this a second comment
 # on two lines
@@ -56,15 +55,36 @@ When I invoke a GET request on location URL
 Then I receive a 200 response
 ```
 
-### Map steps to Clojure code
+### Declaring a specification 
 
-Then write the code that will gets executed for each scenario steps:
+```clojure
+(require 'scenari.v2.core :refer [deffeature])
+
+(deffeature my-specification "./path/to/feature/file") ;; define deftest bound to symbol 'my-specification', put the specification as clojure data-structure in metadata and return the specification
+;;=> 
+;;{:scenarios [{:id "0ef9b8a9-e035-4ae2-96c4-662c0b8988de",
+;;		:pre-run (),
+;;		:post-run (),
+;;		:scenario-name " create a new product",
+;;		:steps [{:sentence-keyword :when,
+;;			 :sentence "I create a new product with name \"iphone 6\" and description \"awesome phone\"",
+;;			 :raw "When I create a new product with name \"iphone 6\" and description \"awesome phone\"",
+;;			 :params [{:type :value, :val "iphone 6"} {:type :value, :val "awesome phone"}],
+;;			 :order 0,
+;;			 :glue nil}
+;;			 ...steps]}
+;;	        ...scenarios ],
+;; :pre-run ()}
+```
+### Write glue-code
+
+Then write the code that will get executed for each scenario steps:
 
 ```clojure
 
-(require 'scenari.core :refer [defgiven defwhen defthen])
+(require 'scenari.v2.core :refer [defwhen defthen])
 
-(defwhen #"I create a new product with name '(.*)' and description '(.*)'"
+(defwhen "I create a new product with name {string} and description {string}"
 [_ name desc]
   (println "executing my product creation function with params " name desc)
   (let [id (UUID/next.)]
@@ -75,107 +95,199 @@ Then write the code that will gets executed for each scenario steps:
   	 :location-url (str "http://example.com/product/" id)}))
 
 
-(defthen #"I receive a response with an id (.+)"
+(defthen "I receive a response with an id {string}"
   [_ id]
   (println (str "executing the assertion that the product has been created with the id " id))
   id)
 ```
 
-**Tips**: you can get a function snippet generated for you when executing the spec without step function. Think about enclosing with quote 'your data' in step sentence to get them detected by the parser and it'll generate a step function skeleton in the output with the correct regex group.
+**Tips**: you can get a function snippet generated for you when executing the spec without step function. Think about enclosing with quote 'your data' in step sentence to get them detected by the parser and it'll generate a step function skeleton in the output with the correct sentence matcher group.
 Example: 
 
 Executing the specification with the step sentence without any matching function:
 
-```cucumber
-When I create a new product with name '(.*)' and description '(.*)'
+```gherkin
+When I create a new product with name "iphone 6" and description "awesome phone"
 ```
 
 will generate in the stdout the following step function skeleton:
 
-```clojure
-No function found for step you may add: 
-(defwhen #"I create a new product with name '(.*)' and description '(.*)'"  [arg0 arg1]  (do "something"))
+```
+Missing step for : When I create a new product with name "iphone 6" and description "awesome phone"
+(defwhen "I create a new product with name {string} and description {string}"  [state arg0 arg1]  (do "something"))
 ```
 
 ### how to get data from the scenario into your step function
 
-Every group the regex will find (everything enclosed in parens () in your regex) will be transmitted as a string to your step function params with the same left-to-right order, BUT the data is first evaluated as clojure.edn data string (see [clojure.edn/read-string](https://clojure.github.io/clojure/clojure.edn-api.html)) and IF it is a Clojure data structure ((coll? evaluated-data) returns true), THEN it will be transmitted evaluated as a param to the step function.
+Every group the sentence matcher will find (everything enclosed in curly braces in your sentence matcher) will be transmitted as a string to your step function params with the same left-to-right order, BUT the data is first evaluated as clojure.edn data string (see [clojure.edn/read-string](https://clojure.github.io/clojure/clojure.edn-api.html)) and IF it is a Clojure data structure ((coll? evaluated-data) returns true), THEN it will be transmitted evaluated as a param to the step function.
 
-**Tips**: the map will be detected by the parser and it'll generate a step function skeleton in the output with the correct regex group.
+**Tips**: the map will be detected by the parser and it'll generate a step function skeleton in the output with the correct sentence matcher.
 
 
-### Execute Specification
+### Execute scenario(s)
+ There is three-way to execute scenarios, depending on your situation
+
+#### Tree execution
+Declaring your specification using `scenari.v2.core/deffeature` returns the parsed specification as clojure data structure. By using `scenari.v2.core/run-scenario`, the specification as data will be ran
 
 ```Clojure
-(run-scenario "resources/product-catalog.feature")
+(require 'scenari.v2.core :refer [run-feature run-features])
+(run-feature #'my-specification)
 
 ;;OR
-
-(run-scenarios "resources")
+(require 'scenari.v2.core :refer [run-scenarios])
+(run-features #'my-specification)
 ```
 
-Get a report of the execution as a Clojure data structure returned by the ```run-scenario``` function
+The execution report will be returned, rely on same clojure data-structure returned by `scenari.v2.core/deffeature`. Will set : 
+- final `:status` of scenario(s) execution
+- step `:status` as `pending` when not executed, `failed` when assertions fail or exception thrown, `success` at last
+- step `:input-state` as the value returned by the previous step executed (empty map for the first one)  
+- step `:output-state` as the value returned by the current step
 
-```Clojure
-{"scenario 1 sentence" 
-    [["step sentence 1.1 executed" {:result "data structure"}]
-     ["step sentence 1.2 executed" {:result "data structure"}]
-     ["step sentence 1.3 executed" {:result "data structure"}]]
- "scenario 2 sentence" 
-    [["step sentence 2.1 executed" {:result "data structure"}]
-     ["step sentence 2.2 executed" {:result "data structure"}]
-     ["step sentence 2.3 executed" {:result "data structure"}]]}
+This method is useful for debugging.
+
+#### Clojure-test execution
+Use clojure-test reporting system by printing execution. 
+
+```clojure
+(require 'scenari.v2.test :refer [run-feature])
+(run-feature #'my-specification)
+;; ________________________
+;; Feature :
+;; 
+;; Testing scenario :
+;; When I create a new product with name "iphone 6" and description "awesome phone"         (from /")
+;; Step failed
+;; create a new product failed at step  of
+;; 
+;; Testing scenario :
+;; When I invoke a GET request on location URL         (from scenari.v2.glue/"I invoke a GET request on location URL")
+;; =====> {:kix "lol"}
+;; Then I receive a 200 response         (from /"")
+;; Step failed
+;; get product info failed at step  of
+;; 
+;; ________________________
+;;
 ```
+Useful to integrate a feature in a clojure test namespace
 
-### Define "Before" and "After" code
 
-```defbefore``` and ```defafter``` are two functions that take another function as a parameter that will get executed respectively before and after the scenarios execution.
-It's useful to setup a resource (like an http server or a database) and shutdown it after all scenarios get executed. You can define several before or after functions, they will all be executed before or after scenarios, though with no guarantee for their execution order.
+#### Kaocha runner
+Kaocha is a test runner and handle test phase lifecycle. 
 
+By defining a test type in your kaocha configuration file (`tests.edn` by default) like this  
+```clojure
+#kaocha/v1
+        {:tests [{:id                                :scenario
+                  :type                              :kaocha.type/scenari
+                  :kaocha/source-paths               ["src"]
+                  :kaocha/test-paths                 ["test/scenario"]
+                  :kaocha.type.scenari/glue-paths    ["test/scenario/glue"]
+                  :kaocha.type.scenari/feature-paths ["resources/scenarios"]}]}
+```
+You are able to launch your scenario using kaocha repl utility function
+
+```clojure
+(require 'kaocha.repl :as krepl)
+(krepl/run :scenario)
+
+;; Testing scenario :  create a new product
+;;   When I invoke a GET request on location URL         (from scenari.v2.glue/"I invoke a GET request on location URL")
+;;   When I create a new product with name "iphone 6" and description "awesome phone" with properties         (from scenari.v2.glue/"I create a new product with name \"(.*)\" and description \"(.*)\" with properties")
+;;   Then I receive a response with an id 56422         (from scenari.v2.glue/"I receive a response with an id 56422")
+;;   Then a location URL         (from scenari.v2.glue/"a location URL")
+;; 
+;; 
+;; 1 tests, 1 assertions, 0 failures.
+;; => #:kaocha.result{:count 1, :pass 1, :error 0, :fail 0, :pending 0}
+```
+Suitable when using kaocha to manage test lifecycle.
+
+### Using hooks
+By providing an options maps in `scenari.v2.core/deffeature`, you can specify function which execute :
+- `:pre-run` before feature execution
+- `:post-run` after feature executed
+- `:pre-scenario-run` before each scenario execution
+- `:post-scenaro-run` after each scenario executed
 Example:
 
 ```Clojure
-(defbefore (fn [] (println "that anonymous function gets executed before all scenarios")))
+(require 'scenari.v2.core :refer [deffeature])
+
+(defn before-all [] (prn "init feature components"))
+(defn before-each [] (prn "init scenario components"))
+(defn after-each [] (prn "clean scenario side effects"))
+(defn clean [] (prn "reset and shut down components"))
+
+(deffeature my-specification "./path/to/feature/file"
+			{:pre-run           [#'before-all]
+			 :pre-scenario-run  [#'before-each]
+			 :post-scenario-run [#'after-each]
+			 :post-run          [#'clean]})
 ```
 
-## Documentation
+### Provide an initial state
+For each scenario execution, an initial state can be provided within the options map of `deffeature`.
 
-### Macros
+Example:
+
+```clojure
+(deffeature my-specification "./path/to/feature/file"
+			{:default-scenario-state {:foo "bar"}})
+```
+By default, the scenario state is an empty map `{}`.
+
+## Documentation 
+
+### Development Workflow
+The [Development Workflow Guide](doc/development-workflow.md) provides a comprehensive overview of the full development cycle when using Scenari. It covers writing feature files, defining features in code, implementing step definitions, and understanding how execution works.
+
+### Internal Feature Structure
+The [Feature Structure Documentation](doc/feature-structure.md) provides a detailed explanation of the internal data structure used to represent features, scenarios, and steps in Scenari. This is particularly useful when extending or customizing Scenari.
+
+### Declaring same step (glue-code) but different namespace
+Sometimes, you have to declare the same step (using the sentence matcher) but for different context (domain or component level for exemple).
+
+TODO Put an exemple about step proximity resolution
+
+### Macros (deprecated)
 There are 3 macros available for given/when/then:
 
 ```clojure
-;; a regex for matching a step in the scenarios
+;; a sentence for matching a step in the scenarios
 ;; a params vector: 
 ;;    the first param is the return of the previous step (nil if first step)
-;;    then one param for each regex group (aka. something in parens (...)) you define.
+;;    then one param for each sentence group (aka. something in parens (...)) you define.
 ;; a body function.
 
-(defgiven regex params body)
-(defwhen regex params body)
-(defthen regex params body)
+(defgiven sentence-matcher params body)
+(defwhen sentence-matcher params body)
+(defthen sentence-matcher params body)
 ```
 
-Macros are here for convenience, plain-old function are also available, you have to provide the step execution function as parameters with the function having groups count + 1 parameters (one for the previous step return and one params for each groups in the regex).
+Macros are here for convenience, plain-old function are also available, you have to provide the step execution function as parameters with the function having groups count + 1 parameters (one for the previous step return and one params for each groups in the sentence matcher).
 
 ```clojure
 (ns mystuff
   (:require [spexec :as spec]))
 ...
-(Given regex fn)
-(When regex fn)
-(Then regex fn)
+(Given sentence-matcher fn)
+(When sentence-matcher fn)
+(Then sentence-matcher fn)
 ```
 
-### Chaining steps
+### Chaining steps 
 Steps often produce side effect or retrieve some stuffs (fn, data) to be used in the next ones, you can store your state in your code or in the scenario itself, but I think an easier mechanism is to think of the steps like a chain and pass a data structure from the return of a step to the input of the next one (very similar to [ring handlers](https://github.com/ring-clojure/ring/wiki/Concepts) or chain of responsibility for instance). So, each step function's return is taken as the input for the next step as the first argument (you can name it `_` if you don't need it). A good practice would be to use a map or vector and then destructure it as the first param of the next step, like :
 
 ```clojure
-(defwhen #"my sentence to be matched with (.*) and (.*)" 
+(defwhen "my sentence to be matched with {string} and {string}" 
          [[key1-in-previous-result k2] param1 param2] 
          (do-something param1 k2 param2) ...)
 ```
 
-### Advanced usage
+### Advanced usage (deprecated)
 
 I use Spexec to test Spexec (yes it eats its own dog food, pretty amazing :-) only a dynamic language like Lisp can do that as easily), only the bootstrap step "Given the step function" is needed:
 
@@ -190,7 +302,7 @@ Then I should get 'processedmydatavalues' from scenario file 'resources/spexec.f
 ```
 
 ```clojure
-(defgiven #"the step function: (.+)" [_ step-fn]
+(defgiven "the step function: {string}" [_ step-fn]
    (eval (read-string step-fn)))
 ```
 
@@ -209,7 +321,6 @@ Also, steps and scenarios association must be isolated within namespace to avoid
 The compatibility with clojure.test would also be with its various reports available (`:pass`, `:fail`, etc.) with reports specific to narrative, scenarios and steps. 
 Concerning assertion, steps could contains `clojure.test/is` assertions or throws exception that will be handled properly like clojure.test ones. 
 
-I use the [regex facility](http://clojure.org/other_functions) provided by Clojure (#"regex expression"), not the most readable with all that parens, sharps, double-quote, etc. but the most supple when you need to extract specific data from your sentence. 
 The gherkin grammar parser is written with the amazing [Instaparse](https://github.com/Engelberg/instaparse) library (I thumbs up for the ClojureScript port by the way!).
 
 I did a presentation of the internals of the library at the Clojure Paris User Group and the slides are here: ["Anatomy of a BDD Execution Library in Clojure"](https://speakerdeck.com/jgrodziski/anatomy-of-a-bdd-execution-library-in-clojure).
@@ -217,12 +328,13 @@ I did a presentation of the internals of the library at the Clojure Paris User G
 ## TODOS
 
 * stop-on-failure? as an option for execution
+* give another way to declare steps without macro (proper defn with `:scenari/regex` in meta)
 
 ## License
 
 Scenari is released under the terms of the [MIT License](http://opensource.org/licenses/MIT).
 
-Copyright © 2020 Jérémie Grodziski jeremie@grodziski.com
+Copyright © 2024 DefSquare defsquare.io
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

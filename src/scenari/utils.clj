@@ -75,7 +75,7 @@
   (let [ansi-color #(format "\u001b[%sm"
                             (case % :reset  "0"  :black  "30" :red   "31"
                                   :green  "32" :yellow "33" :blue  "34"
-                                  :purple "35" :cyan   "36" :white "37"
+                                  :purple "35" :cyan   "36" :white "37" :grey "90"
                                   "0"))]
     (str (ansi-color color) (apply str xs) (ansi-color :reset))))
 
