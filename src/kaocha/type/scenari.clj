@@ -62,7 +62,7 @@
   (merge scenario
          {::testable/type :kaocha.type/scenari-scenario
           ::testable/id   (keyword (scenario->id scenario))
-          ::testable/desc (:scenario-name scenario)
+          ::testable/desc (or (:scenario-name scenario) "")
           ::feature       (keyword (path->id (str (:project-directory document) (:file document))))
           ::file          (str (:project-directory document) (:file document))
           }))
