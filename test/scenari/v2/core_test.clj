@@ -1,23 +1,10 @@
 (ns scenari.v2.core-test
   (:require [clojure.test :as t :refer [is]]
-            [scenari.core :as v1]
             [scenari.v2.core :as v2]
             [scenari.v2.test :as sc-test]
             [kaocha.type.scenari]
             [kaocha.repl :as krepl]
             [testit.core :refer :all]))
-
-(t/deftest generate-step-fn-test
-  (t/is (= (v1/generate-step-fn {:sentence "When I create a new product with name \"iphone 6\""})
-           "(defwhen \"I create a new product with name {string}\"  [state arg0]  (do \"something\"))"))
-  (t/is (= (v1/generate-step-fn {:sentence "When I create a new product with name \"iphone 6\" and description \"awesome phone\""})
-           "(defwhen \"I create a new product with name {string} and description {string}\"  [state arg0 arg1]  (do \"something\"))"))
-  (t/is (= (v1/generate-step-fn {:sentence "When I create a new products" :tab_params [{:product_name "iPhone 6" :product_desc "telephone"}]})
-           "(defwhen \"I create a new products\"  [state arg0]  (do \"something\"))"))
-  (t/is (= (v1/generate-step-fn {:sentence "When I create a new product with name \"iPhone 6\" and others" :tab_params [{:product_name "iPhone 7" :product_desc "telephone"}]})
-           "(defwhen \"I create a new product with name {string} and others\"  [state arg0 arg1]  (do \"something\"))"))
-  (t/is (= (v1/generate-step-fn {:sentence "When I create a new product with id 1234" :tab_params [{:product_name "iPhone 7" :product_desc "telephone"}]})
-           "(defwhen \"I create a new product with id {number}\"  [state arg0]  (do \"something\"))")))
 
 (t/deftest find-sentence-params-test
   (t/testing "finding parameters in sentence"
@@ -28,17 +15,6 @@
 
 (v2/defgiven #"My duplicated step in other ns and feature ns" [state]
              state)
-
-; TODO fix closest glue test
-#_(t/deftest duplicate-glues-test
-  (require 'scenari.v2.glue)
-  (require 'scenari.v2.other-glue.glue)
-  (t/testing "Should take the step located in ns of feature"
-    (t/is (= (:ns (v2/find-glue-by-step-regex {:sentence "My duplicated step in other ns and feature ns"} *ns*)) *ns*)))
-  (t/testing "Should fail when step both located in others ns as same level"
-    (t/is (= (try (v2/find-glue-by-step-regex {:sentence "My duplicated step in others ns"} *ns*)
-                  (catch Exception _ false))
-             false))))
 
 (t/deftest deffeature-macro-test
   (t/testing "macro definition taking different feature structure"
@@ -58,6 +34,4 @@
 
   (krepl/test-plan)
   (krepl/run-all)
-  (krepl/run :scenario)
-
-  )
+  (krepl/run :scenario))

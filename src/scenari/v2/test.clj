@@ -1,6 +1,6 @@
 (ns scenari.v2.test
   (:require [clojure.test :as t]
-            [scenari.core :as scenari]
+            [scenari.v2.step :refer [generate-step-fn]]
             [scenari.v2.core :refer [run-step]]
             [scenari.utils :as utils]))
 
@@ -56,7 +56,7 @@
 
 (defmethod t/report :missing-step [{:keys [step-sentence]}] (t/with-test-out
                                                               (println (utils/color-str :red "Missing step for : " (get step-sentence :raw)))
-                                                              (println (utils/color-str :red (scenari/generate-step-fn {:sentence (get step-sentence :raw)})))))
+                                                              (println (utils/color-str :red (generate-step-fn {:sentence (get step-sentence :raw)})))))
 
 (defn run-feature [feature]
   (when-let [{{:keys [feature scenarios pre-run]} :scenari/feature-ast} (meta feature)]

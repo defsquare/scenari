@@ -86,3 +86,24 @@
                              <value>          = #'[a-zA-Z0-9+ ]*'
                              whitespace       = #'\\s+'
                              eol              = #'\r?\n'")))
+
+(def step (insta/parser
+                   (str "STEP             = <whitespace?> step_keyword (words | data_group | parameter)* <eol>?
+                             given            = <" (kw-translations :given) ">
+                             when             = <" (kw-translations :when) ">
+                             then             = <" (kw-translations :then) ">
+                             and              = <" (kw-translations :and) ">
+                             words            = #'[a-zA-Z./\\_\\-\\'èéêàûù ]+'
+                             <parameter_name> = #'[a-zA-Z\"./\\_\\- ]+'
+                             parameter        = <'<'> parameter_name <'>'> | <'${'> parameter_name <'}'>
+                             string           = <'\"'> #'[^\"]*' <'\"'>
+                             number           = #'\\d+'
+                             <data_group>     = string | number | map | vector
+                             map              = #'\\{[a-zA-Z0-9\\-:,./\\\" ]+\\}'
+                             elements         = (#'\".+\"|[0-9]+' <whitespace>?)*
+                             vector           = <'['> elements <']'>
+                             <step_keyword>   = given | when | then | and
+                             <whitespace>     = #'\\s+'
+                             <value>          = #'[a-zA-Z0-9+ ]*'
+                             whitespace       = #'\\s+'
+                             eol              = #'\r?\n'")))

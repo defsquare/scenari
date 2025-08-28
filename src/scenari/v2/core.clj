@@ -5,7 +5,8 @@
             [instaparse.transform :as insta-trans]
             [scenari.v2.parser :as parser]
             [scenari.v2.glue :as glue])
-  (:import (org.apache.commons.io FileUtils)
+  (:import (java.io File)
+           (org.apache.commons.io FileUtils)
            (java.util UUID)))
 
 
@@ -26,7 +27,7 @@
 
 (defn file-from-fs-or-classpath [x]
   (let [r (io/resource x)
-        f (when (and (instance? java.io.File x) (.exists x)) x)
+        f (when (and (instance? File x) (.exists x)) x)
         f-str (when (and (instance? String x) (.exists (io/as-file x))) x)]
     (io/as-file (or r f f-str))))
 
@@ -38,9 +39,9 @@
               true                                          ;;recursive
               ))]
     (case (str (type basedir))
-      "class java.lang.String" (if (.exists (java.io.File. basedir))
-                                 (find-spec-files (java.io.File. basedir))
-                                 (throw (RuntimeException. (str basedir " doesn't exists in path: " (java.lang.System/getProperty "user.dir")))))
+      "class java.lang.String" (if (.exists (File. ^String basedir))
+                                 (find-spec-files (File. ^String basedir))
+                                 (throw (RuntimeException. (str basedir " doesn't exists in path: " (System/getProperty "user.dir")))))
       "class java.io.File" (find-spec-files basedir))))
 
 (defn find-sentence-params [sentence]
@@ -59,7 +60,7 @@
                 (if-let [f (file-from-fs-or-classpath path)]
                   (file-or-dir f)
                   :feature-as-str)
-                (if (instance? java.io.File path)
+                (if (instance? File path)
                   (file-or-dir path)
                   (throw (RuntimeException. (str "type " (type path) "for spec not accepted (only string or file)")))))))
           :default :file)
