@@ -3,6 +3,6 @@
 
 (def module-name "scenari")
 (def path ".")
-(def version "2.0.11-alpha")
-(def tag "v2.0.11-alpha")
-(def generated-at "2025-08-28T12:00:00Z")
+(def version "2.0.0")
+(def tag "v2.0.0")
+(def generated-at "2025-08-28T13:00:00Z")

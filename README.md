@@ -23,10 +23,10 @@ This library was previously named "Spexec" (https://github.com/zenmodeler/spexec
 
 ```clojure
 ;;add this dependency to your project.clj file
-[io.defsquare/scenari "2.0.0-alpha"]
+[io.defsquare/scenari "2.0.0"]
 ;;or deps.edn
 {
- io.defsquare/scenari {:mvn/version "2.0.0-alpha"}
+ io.defsquare/scenari {:mvn/version "2.0.0"}
 }
 ;;then in your ns statement
 (:require [scenari.v2.core :as scenari :refer [defgiven defwhen defthen deffeature]])
@@ -169,19 +169,6 @@ Use clojure-test reporting system by printing execution.
 ;; get product info failed at step  of
 ;; 
 ;; ________________________
-;; 
-;; 
-;; Ran 1 features containing 2 scenarios.
-;; 0 success, 2 fail.
-;; =>
-;; {:test 0,
-;;  :pass 0,
-;;  :fail 2,
-;;  :error 0,
-;;  :executed-features 1,
-;;  :executed-scenarios 2,
-;;  :scenarios-failed 2,
-;;  :feature-failed 1}
 ;;
 ```
 Useful to integrate a feature in a clojure test namespace
