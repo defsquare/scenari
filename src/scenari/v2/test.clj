@@ -8,6 +8,7 @@
 
 (defmethod t/report :begin-feature [m] (t/with-test-out
                                          (t/inc-report-counter :executed-features)
+                                         (println)
                                          (println (str "________________________"))
                                          (println (str "Feature : " (:feature m)))
                                          (println)))
@@ -21,6 +22,7 @@
     (println)))
 
 (defmethod t/report :begin-scenario [m] (t/with-test-out
+                                          (t/inc-report-counter :test)
                                           (t/inc-report-counter :executed-scenarios)
                                           (println (str "Testing scenario : " (:scenario m)))))
 
@@ -56,19 +58,11 @@
                                                               (println (utils/color-str :red "Missing step for : " (get step-sentence :raw)))
                                                               (println (utils/color-str :red (scenari/generate-step-fn {:sentence (get step-sentence :raw)})))))
 
-(defmethod t/report :features-summary [{:keys [executed-features scenarios-succeed scenarios-failed]
-                                        :or {scenarios-succeed 0 scenarios-failed 0}}]
-  (t/with-test-out
-    (println "\nRan" executed-features "features containing"
-             (+ scenarios-succeed scenarios-failed) "scenarios.")
-    (println scenarios-succeed "success," scenarios-failed "fail.")))
-
 (defn run-feature [feature]
   (when-let [{{:keys [feature scenarios pre-run]} :scenari/feature-ast} (meta feature)]
     (doseq [{pre-run-fn :ref} pre-run]
       (pre-run-fn))
-    (binding [t/*report-counters* (ref t/*initial-report-counters*)
-              *feature-succeed* (atom true)]
+    (binding [*feature-succeed* (atom true)]
       (t/do-report {:type :begin-feature, :feature feature})
       (doseq [scenario scenarios]
         (t/do-report {:type :begin-scenario, :scenario (:scenario-name scenario)})
@@ -94,14 +88,10 @@
             (t/do-report {:type :scenario-succeed, :scenario (:scenario-name scenario)})
             (t/do-report {:type     :scenario-failed
                           :scenario (:scenario-name scenario)}))))
-      (t/do-report {:type :end-feature, :feature feature :succeed? @*feature-succeed*})
-      @t/*report-counters*)))
+      (t/do-report {:type :end-feature, :feature feature :succeed? @*feature-succeed*}))))
 
 (defn run-features
   ([] (apply run-features (filter #(some? (:scenari/feature-ast (meta %))) (vals (ns-interns *ns*)))))
   ([& features]
-   (let [reports (->> features
-                      (map run-feature)
-                      (apply merge-with +))]
-     (t/do-report (assoc reports :type :features-summary))
-     reports)))
+   (doseq [feature features]
+     (run-feature feature))))
