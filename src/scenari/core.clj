@@ -1,4 +1,4 @@
-(ns scenari.core
+(ns ^:deprecated scenari.core
   (:require [clojure.zip :as zip]
             [clojure.edn :only read-string]
             [clojure.pprint :refer :all]

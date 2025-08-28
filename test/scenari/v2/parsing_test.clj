@@ -1,10 +1,10 @@
 (ns scenari.v2.parsing-test
   (:require [clojure.test :refer :all]
-            [scenari.core :refer [gherkin-parser sentence-parser]]))
+            [scenari.v2.parser :refer [gherkin sentence]]))
 
 
 (deftest basic-feature-skeleton-test
-  (is (= (gherkin-parser "
+  (is (= (gherkin "
 Feature: my feature
   Scenario: scenario 1
     Given a step
@@ -29,7 +29,7 @@ Feature: my feature
          )))
 
 (deftest feature-with-annotation-test
-  (is (= (gherkin-parser "
+  (is (= (gherkin "
 @Annotation1 @Annotation2
 Feature: my feature
   Scenario: scenario 1
@@ -56,7 +56,7 @@ Examples:
 ")
 
 (deftest feature-parsing-test
-  (is (= (gherkin-parser "
+  (is (= (gherkin "
 Scenario: test example section
 Given a location URL
 Examples:
@@ -80,7 +80,7 @@ Examples:
 
 
 (deftest scenario-with-examples-test
-  (is (= (gherkin-parser "
+  (is (= (gherkin "
 Scenario: test example section
 Given a location URL
 Examples:
@@ -103,7 +103,7 @@ Examples:
          )))
 
 (deftest scenario-with-tab-params-test
-  (is (= (gherkin-parser "
+  (is (= (gherkin "
 Scenario: create a new product
 # this is a comment
 When I create a new products
@@ -129,7 +129,7 @@ Then I receive a response with an id")
              [:step_sentence [:then] [:sentence "I receive a response with an id"]]]]]])))
 
 (deftest feature-with-narrative-test
-  (is (= (gherkin-parser "
+  (is (= (gherkin "
 Feature: feature with full narrative
 As a user
 I want to login
@@ -149,35 +149,35 @@ Scenario: scenario 1
             [:steps
              [:step_sentence [:given] [:sentence "a step"]]]]]])))
 
-(deftest sentence-parser-test
+(deftest sentence-test
   (testing "Parsing sentences with parameters"
-    (is (= (sentence-parser "I create a new product with name \"iphone 6\" and description \"awesome phone\"")
+    (is (= (sentence "I create a new product with name \"iphone 6\" and description \"awesome phone\"")
            [:SENTENCE
             [:words "I create a new product with name "]
             [:string "iphone 6"]
             [:words " and description "]
             [:string "awesome phone"]]))
     
-    (is (= (sentence-parser "I buy 42 products")
+    (is (= (sentence "I buy 42 products")
            [:SENTENCE
             [:words "I buy "]
             [:number "42"]
             [:words " products"]]))
     
-    (is (= (sentence-parser "I create a new product with <product_name> and price ${price}")
+    (is (= (sentence "I create a new product with <product_name> and price ${price}")
            [:SENTENCE
             [:words "I create a new product with "]
             [:parameter "product_name"]
             [:words " and price "]
             [:parameter "price"]]))
     
-    (is (= (sentence-parser "I create a product with map {\"name\":\"phone\",\"price\":499}")
+    (is (= (sentence "I create a product with map {\"name\":\"phone\",\"price\":499}")
            [:SENTENCE
             [:words "I create a product with map "]
             [:map "{\"name\":\"phone\",\"price\":499}"]]))))
 
 (deftest unicode-character-test
-  (is (= (gherkin-parser "
+  (is (= (gherkin "
 Scenario: scenario with unicode characters
   Given a product with name \"Téléphone\"
   When I add to cart with price €100
@@ -191,17 +191,17 @@ Scenario: scenario with unicode characters
              [:step_sentence [:when] [:sentence "I add to cart with price €100"]]
              [:step_sentence [:then] [:sentence "I should see \"Produit ajouté !\""]]]]]]))
   
-  (is (= (sentence-parser "a product with name \"Téléphone\"")
+  (is (= (sentence "a product with name \"Téléphone\"")
          [:SENTENCE
           [:words "a product with name "]
           [:string "Téléphone"]])))
 
 (deftest empty-feature-test
-  (is (= (gherkin-parser "")
+  (is (= (gherkin "")
          [:SPEC [:scenarios]])))
 
 (deftest commented-feature-test
-  (is (= (gherkin-parser "
+  (is (= (gherkin "
 # This is a comment at the top of the file
 # Multi-line comment
 Feature: feature with comments

@@ -3,7 +3,7 @@
             [clojure.java.io :as io]
             [clojure.string :as string]
             [instaparse.transform :as insta-trans]
-            [scenari.core :as scenari]
+            [scenari.v2.parser :as parser]
             [scenari.v2.glue :as glue])
   (:import (org.apache.commons.io FileUtils)
            (java.util UUID)))
@@ -48,7 +48,7 @@
     {:SENTENCE (fn [& s] (->> s
                               (filter (fn [[type _]] (#{:string :number} type)))
                               (mapv sentence-params->params)))}
-    (scenari/sentence-parser sentence)))
+    (parser/sentence sentence)))
 
 (defmulti read-source
           (fn [path]
@@ -104,7 +104,7 @@
                                                contents))
      :scenarios         (fn [& contents] {:scenarios (into [] contents)
                                           :pre-run   (map #(assoc (meta %) :ref %) pre-run)})}
-    (scenari/gherkin-parser source)))
+    (parser/gherkin source)))
 
 ;; ------------------------
 ;;          RUN
