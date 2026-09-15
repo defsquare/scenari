@@ -90,7 +90,7 @@
                                      (doc-string->params data-param)))]
            {:params params})))
 
-(defn ->feature-ast [source {:keys [pre-run pre-scenario-run post-scenario-run default-scenario-state] :as _options} ns-feature]
+(defn ->feature-ast [source {:keys [pre-run pre-scenario-run post-run post-scenario-run default-scenario-state] :as _options} ns-feature]
   (insta-trans/transform
     {:SPEC              (fn [& s] (apply merge s))
      :annotation        (fn [s] s)
@@ -110,7 +110,8 @@
                                                 :default-state (or default-scenario-state {})}
                                                contents))
      :scenarios         (fn [& contents] {:scenarios (into [] contents)
-                                          :pre-run   (map #(assoc (meta %) :ref %) pre-run)})}
+                                          :pre-run   (map #(assoc (meta %) :ref %) pre-run)
+                                          :post-run  (map #(assoc (meta %) :ref %) post-run)})}
     (parser/gherkin source)))
 
 ;; ------------------------
@@ -163,13 +164,15 @@
       (recur scenarios others))))
 
 (defn run-feature [feature]
-  (let [{:keys [scenarios pre-run] :as feature-ast} (get (meta feature) :scenari/feature-ast)]
-    (doseq [{pre-run-fn :ref} pre-run]
-      (pre-run-fn))
-    (let [scenarios (run-scenarios scenarios scenarios)]
-      (-> feature-ast
-          (assoc :scenarios scenarios)
-          (assoc :status (if (contains? (set (map :status scenarios)) :fail) :fail :success))))))
+  (let [{:keys [scenarios pre-run post-run] :as feature-ast} (get (meta feature) :scenari/feature-ast)
+        _ (doseq [{pre-run-fn :ref} pre-run]
+            (pre-run-fn))
+        result-scenarios (run-scenarios scenarios scenarios)
+        _ (doseq [{post-run-fn :ref} post-run]
+            (post-run-fn))]
+    (-> feature-ast
+        (assoc :scenarios result-scenarios)
+        (assoc :status (if (contains? (set (map :status scenarios)) :fail) :fail :success)))))
 
 (defn run-features
   ([] (apply run-features (filter #(some? (:scenari/feature-ast (meta %))) (vals (ns-interns *ns*)))))
